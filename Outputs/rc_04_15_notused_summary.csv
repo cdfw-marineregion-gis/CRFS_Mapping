@@ -1,0 +1,10 @@
+"Reason","Count"
+"SP_CODE is not valid.",4
+"Species not found in Lookup.",3
+"Location not MODE_FX == 7 (PR data)",17333
+"Location data does not include any block or coordinate data.",47473
+"Duplicate ids are used in the location (i8) data table",11388
+"Does not have corresponding location data by ID",64191
+"Location data does not include any block or coordinate data.",32234
+"ID did not join with any location data",164
+"Duplicate IDs again",294
