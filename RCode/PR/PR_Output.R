@@ -34,6 +34,25 @@ Sp <- Sp %>%
   filter(Common_Name != "bivalve class")
 
 
+
+# CPUA by ID --------------------------------------------------------------
+nrow(oc_by_id_agg_04_15)
+nrow(rc_by_id_agg_04_15)
+all_by_id = oc_by_id_agg_04_15 %>%
+  full_join(rc_by_id_agg_04_15, by = c("id", "SP_CODE", "Block", "Common_Name", "date", 'month', 'year')) %>%
+  left_join(Sp, by = c("Common_Name", "SP_CODE" = "PSMFC_Code")) %>%
+  mutate(id_noloc = substr(id, 1, nchar(id) - 1)) %>% #need to make sure there are no double digit locations, should realistically go back to original catch scripts
+  full_join(oe_by_id_agg_04_15, by = c("id_noloc" = "id", "Block", "date", 'month', 'year'), suffix = c("_catch", "_effort"))
+nrow(all_by_id)
+names(all_by_id)
+
+comp = all_by_id %>%
+  group_by(Common_Name_catch, Common_Name_effort, TripType_Description_catch, TripType_Description_effort, primary) %>%
+  count() %>%
+  arrange(desc(n))
+
+write.csv(comp, "CPUE_combos.csv", na = "", row.names = F)
+
 # Observed Catch ----------------------------------------------------------
 
 #calculate the final results at the block, species, yearly level. Can modify to be at any other time frame that is included in the id level output (day or month)
@@ -98,7 +117,7 @@ final = oc_block_final %>%
 
 
 # CPUA = reported fish caught + observed fish caught at the species level / observed (maybe reported at some point) at the trip type effort
-cpua = final %>%
+cpua_year_aggregated = final %>%
   select(Block, year, sp_code, Alpha, Common_Name, TripType_Description, Ob_Total_Fish_Caught, Rep_Total_Fish_Caught, Ob_AnglerDays, Ob_Vessels) %>%
   mutate(Ob_Total_Fish_Caught = ifelse(is.na(Ob_Total_Fish_Caught), 0, Ob_Total_Fish_Caught)) %>%
   mutate(Rep_Total_Fish_Caught = ifelse(is.na(Rep_Total_Fish_Caught), 0, Rep_Total_Fish_Caught)) %>%
@@ -108,11 +127,8 @@ cpua = final %>%
   mutate(CPUA = Total_Fish_Caught/Ob_AnglerDays) %>%
   arrange(Block, Common_Name, year)
 
-cpua = cpua %>%
+cpua_year_aggregated = cpua_year_aggregated %>%
   mutate(CPUA = ifelse(is.infinite(CPUA), 0, CPUA))
-
-test = cpua %>%
-  filter(is.infinite(CPUA))
 
 dat_long = cpua 
 

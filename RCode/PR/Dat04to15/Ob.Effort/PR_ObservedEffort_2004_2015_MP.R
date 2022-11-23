@@ -1,7 +1,7 @@
 # PR Observed Effort 2004_2015 ---------------------------------------------
 
 # Michael Patton's simplification of original script (PR_ObservedEffort_2004_2015km Part 1 and Part2.R)
-#7/28/2022
+
 
 
 #USER INPUT:
@@ -25,6 +25,9 @@ rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "by_id_a
 #read in the i1 table 
 oe = fread(file=here("RCode", "PR", "Dat04to15", "Data", "PR_i1_2004-2015_487087r.csv"), fill = T, na.string = c("",".") )
 
+#remove all columns that are only NAs
+not_all_na <- function(x) any(!is.na(x))
+oe = oe %>% select(where(not_all_na))
 
 ### temporary code to investigate prim1 prim2 issue
 Sp<- fread(here("Lookups", "SpeciesList210510.csv" )) 
@@ -169,7 +172,6 @@ loc <- loc %>%
 
 loc[loc==""]<-NA
 
-before = nrow(loc)
 # remove data that does not have block or coordiantes reported
 notused3 = loc %>%
   filter(is.na(Bk1Bx1a) & is.na(Bk1Bx1b) & is.na(Bk1Bx1c) & is.na(Bk2Bx2a) & is.na(Bk2Bx2b)  & is.na(Bk2Bx2c) & is.na(ddlat)) %>%
@@ -177,10 +179,8 @@ notused3 = loc %>%
 
 loc = loc %>%
   filter(!is.na(Bk1Bx1a) | !is.na(Bk1Bx1b) | !is.na(Bk1Bx1c) | !is.na(Bk2Bx2a) | !is.na(Bk2Bx2b)  | !is.na(Bk2Bx2c) | !is.na(ddlat))
-after = nrow(loc)
 
-#test to make sure filtering was applied correctly
-before - removed == after
+
 
 # count the number of times a unique id code appears in the loction data
 freq_summary <- loc %>% group_by(ID_CODE) %>% count()
