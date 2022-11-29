@@ -50,8 +50,70 @@ comp = all_by_id %>%
   group_by(Common_Name_catch, Common_Name_effort, TripType_Description_catch, TripType_Description_effort, primary) %>%
   count() %>%
   arrange(desc(n))
+sum(comp$n)
 
 write.csv(comp, "CPUE_combos.csv", na = "", row.names = F)
+
+catch_noeffort = filter(comp, !is.na(Common_Name_catch) & is.na(Common_Name_effort))
+sum(catch_noeffort$n)
+effort_nocatch = filter(comp, is.na(Common_Name_catch) & !is.na(Common_Name_effort))
+sum(effort_nocatch$n)
+
+# need to investigate these, have different FISHNSP
+test = all_by_id %>%
+  group_by(id, Block, Common_Name_catch, TripType_Description_effort, primary) %>%
+  count() %>%
+  filter(!is.na(id))
+
+test = all_by_id %>%
+  mutate(CPUE_id = Total_Fish_Caught/AnglerDays) %>%
+  mutate(fish_total_weight = Ob_AvKWgt*Ob_Weighed_Fish) %>%
+  group_by(year, Block, Common_Name_catch, Alpha, TripType_Description_effort) %>%
+  summarise(n_id = n(),
+            #CPUE_id_avg = mean(CPUE_id, na.rm = T),
+            Total_Fish_Caught = sum(Total_Fish_Caught, na.rm = T),
+            AnglerDays = sum(AnglerDays, na.rm = T),
+            fish_total_weight = sum(fish_total_weight, na.rm = T),
+            fish_total_weighed = sum(Ob_Weighed_Fish, na.rm=T)) %>%
+  mutate(Ob_AvKWgt = fish_total_weight/fish_total_weighed) %>%
+  mutate(CPUE_agg = Total_Fish_Caught/AnglerDays)
+
+cpua_year_aggregated = test %>%
+  mutate(CPUE_agg = ifelse(is.infinite(CPUE_agg), 0, CPUE_agg))
+dat_long = cpua_year_aggregated 
+
+write.csv(dat_long, "Outputs/PR_CPUA.csv", row.names = F, na = "")
+
+dat_wide = cpua_year_aggregated %>%
+  pivot_wider(names_from = year, values_from = c("Total_Fish_Caught", "AnglerDays", "Ob_AvKWgt", "CPUE_agg" ), values_fill = 0)
+
+write.csv(dat_wide, "Outputs/PR_wide_CPUA.csv", row.names = F, na = "")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Observed Catch ----------------------------------------------------------
 
