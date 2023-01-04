@@ -20,6 +20,9 @@ options(scipen = 999)
 # to put the cart before the horse, this line is required when sourcing multiple R scripts. The plan is to run all required catch and effort scripts in a "master" script to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. Youll see it in the other scripts as well.
 rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "by_id_agg_04_15", "by_id_agg_16_19", "by_id_agg_99_03")])
 
+# sources the script that is used to clean up the i8 table, returns a single variable 'all_locations' that provides the cleanup blocks at the ID level. Went through a series of filters as well. See other script for more information. 
+source(here('RCode', "PR", "Locations", 'PR_Location.R'))
+
 #  read in i3 table: sampler observed catch data. the here function provides the relative path to where the data is saved. 
 oc <- fread(file = here("RCode", "PR", "Dat04to15", "Data", "PR_i3_2004-2015_759607r.csv"), fill = TRUE, na.string = c("",".")) 
 
@@ -61,204 +64,23 @@ oc_species <- oc %>%
 nrow(oc) == (nrow(oc_species) + nrow(notused2))
 
 
-# Format and link block data ----------------------------------------------
-
-# function takes block column and microblock column and standardizes if populated
-format_box = function(block_column, microblock_column) {
-  combined = paste(block_column, microblock_column, sep="-")
-  combined_noNA = gsub("NA", "", combined)
-  combined_noblanks = ifelse(nchar(combined_noNA) < 5, "", combined_noNA)
-  return(combined_noblanks)
-}
-# Read in location data, or the i8 data table for northern california
-NLocList <- fread(file = here("RCode", "PR", "Dat04to15", "Data", "i8_1999-2016_NorCal_235374r.csv"), fill = TRUE, na.string = c("",".", "NA")) 
-
-# create new id based on id code and location number, format boxes into XX-XXX format, apply to each block column
-NLocList <- NLocList %>% 
-  mutate(locn = ifelse(is.na(locn) & !is.na(locnum), locnum, locn)) %>%
-  mutate(locn = ifelse(is.na(locn)| locn == 0, 1, locn),
-         block1 = ifelse(block1 == 9999999, NA, block1),
-         id_loc = as.character(paste(ID_CODE, locn, sep="")),
-         Bk1Bx1a = format_box(block1, box1a),  
-         Bk1Bx1b = format_box(block1, box1b), 
-         Bk1Bx1c  = format_box(block1, box1c), 
-         Bk2Bx2a  = format_box(block2, box2a), 
-         Bk2Bx2b  = format_box(block2, box2b), 
-         Bk2Bx2c  = format_box(block2, box2c)) %>%
-  select(id_loc, survey, MODE_FX, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, HGSIZE, hgsize2)
-
-# read in i8 location data for southern california
-SLocList <- fread(file = here("RCode", "PR", "Dat04to15", "Data", "i8_1999-2016_SoCal_204029r.csv"), fill = TRUE, na.string = c("",".", "NA")) 
-
-locn = SLocList %>% group_by(locn, locnum) %>% count()
-SLocList <- SLocList %>% 
-  mutate(locn = ifelse(is.na(locn) & !is.na(locnum), locnum, locn)) %>%
-  mutate(locn = ifelse(is.na(locn)| locn == 0, 1, locn),
-         block1 = ifelse(block1 == 9999999, NA, block1),
-         id_loc = as.character(paste(ID_CODE, locn, sep="")),
-         Bk1Bx1a = format_box(block1, box1a),  
-         Bk1Bx1b = format_box(block1, box1b), 
-         Bk1Bx1c = format_box(block1, box1c), 
-         Bk2Bx2a = format_box(block2, box2a), 
-         Bk2Bx2b = format_box(block2, box2b), 
-         Bk2Bx2c = format_box(block2, box2c)) %>%
-  select(id_loc, survey, MODE_FX, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, HGSIZE, hgsize2)
-
-#combine north and south locaiton data together
-loc = rbind(NLocList, SLocList)
-
-
-loc  <- loc %>% filter(!is.na(id_loc))
-
-# remove any data that is not PR (MODE_FX = 7)
-notused3 = loc %>% 
-  filter(MODE_FX != 7) %>%
-  mutate(Reason = "Location not MODE_FX == 7 (PR data)")
-unique(notused3$MODE_FX)
-
-loc <- loc %>% 
-  filter(MODE_FX ==7)
-
-loc[loc==""]<-NA
-
-before = nrow(loc)
-# remove data that does not have block or coordiantes reported
-notused4 = loc %>%
-  filter(is.na(Bk1Bx1a) & is.na(Bk1Bx1b) & is.na(Bk1Bx1c) & is.na(Bk2Bx2a) & is.na(Bk2Bx2b)  & is.na(Bk2Bx2c) & is.na(ddlat)) %>%
-  mutate(Reason = "Location data does not include any block or coordinate data.")
-
-removed = nrow(notused4)
-
-loc = loc %>%
-  filter(!is.na(Bk1Bx1a) | !is.na(Bk1Bx1b) | !is.na(Bk1Bx1c) | !is.na(Bk2Bx2a) | !is.na(Bk2Bx2b)  | !is.na(Bk2Bx2c) | !is.na(ddlat))
-after = nrow(loc)
-
-before - removed == after
-# THIS IS OLD LOGIC FROM WINNS SCRIPTS, LOOKING AT THE DUPLICATE ID VALUES (notused5 below) NOT SURE WHY SOME OF THESE CANNOT BE USED
-
-# count the number of times a unique id code appears in the location data
-freq_summary <- loc %>% group_by(id_loc) %>% count()
-
-#Calculate percentage of occurrence where frequency of singular id code > 1 and calculate the maximum number of duplicate ID codes
-per = (nrow(filter(freq_summary, n > 1))/nrow(freq_summary))*100
-message(paste(round(per,2), "% of ids have duplicates with a maximum of ", max(freq_summary$n), "duplicates."))
-
-
-qa_duplicates = loc %>%
-  left_join(freq_summary, by = "id_loc") %>%
-  filter(n> 1) %>%
-  arrange(id_loc)
-
-
-# join back in this count data
-dfr_loc <- loc %>%
-  left_join(freq_summary, by = "id_loc") %>%
-  arrange(id_loc) %>%
-  rename(freq = n)
-
-# remove data that has duplicate ID codes
-notused5 = oc_species %>%
-  inner_join(filter(dfr_loc, freq > 1), by = c("id"= "id_loc")) %>%
-  mutate(Reason = "Duplicate ids are used in the location (i8) data table")
-
-#filter to just ids used once
-dfr_loc = filter(dfr_loc, freq == 1)
 
 # Merge together catch and location data ----------------------------------
 # joining variable is the id, select required columns
 oc_species_loc <- oc_species %>%
-  inner_join(dfr_loc, by = c("id"= "id_loc"))  %>% 
-  select(id, date, month, year, SP_CODE, ALPHA5, Common_Name, TripType_Description, DISP3, WGT, FSHINSP, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, HGSIZE, hgsize2)
+  inner_join(all_locations, by = c("id"= "id_loc"))  %>% 
+  select(id, date, month, year, SP_CODE, ALPHA5, Common_Name, TripType_Description, DISP3, WGT, FSHINSP, HLDEPTH, HLDEPTH2, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, total_blocks)
 
 #pull out data that is lost in the join (id does not have any location data)
-notused6 <- oc_species %>%
-  anti_join(dfr_loc, by = c("id"= "id_loc")) %>%
+notused3 <- oc_species %>%
+  anti_join(all_locations, by = c("id"= "id_loc")) %>%
   mutate(Reason = "Does not have corresponding location data by ID")
 
-#check that no ids were lost
-(n_distinct(oc_species_loc$id_n) + n_distinct(notused6$id_n)) == n_distinct(oc_species$id_n)
-
-# remove any blocks that have an hgsize inputted, this field is where the survey gives the "range" of blocks visited?
-hgsize_summary = oc_species_loc %>% group_by(HGSIZE) %>% count()
-
-BlkFilterHGSIZERemoved = oc_species_loc
-BlkFilterHGSIZERemoved <- oc_species_loc  %>%
-  mutate(Bk1Bx1a = ifelse(is.na(HGSIZE),Bk1Bx1a, NA),
-         Bk1Bx1b = ifelse(is.na(HGSIZE),Bk1Bx1b, NA),
-         Bk1Bx1c = ifelse(is.na(HGSIZE),Bk1Bx1c, NA),
-         Bk2Bx2a = ifelse(is.na(hgsize2),Bk2Bx2a, NA),
-         Bk2Bx2b = ifelse(is.na(hgsize2),Bk2Bx2b, NA),
-         Bk2Bx2c = ifelse(is.na(hgsize2),Bk2Bx2c, NA))
-
-# clean up the dataframe by changing any blank cells to NA
-BlkFilterHGSIZERemoved[BlkFilterHGSIZERemoved==""]<-NA
-
-#pull out the data that has blocks report
-BlkFilter <- BlkFilterHGSIZERemoved  %>% 
-  filter(!is.na(Bk1Bx1a) | !is.na(Bk1Bx1b) | !is.na(Bk1Bx1c) | !is.na(Bk2Bx2a) | !is.na(Bk2Bx2b)  | !is.na(Bk2Bx2c)) 
-
-notused9 = BlkFilterHGSIZERemoved  %>% 
-  filter(is.na(Bk1Bx1a) & is.na(Bk1Bx1b) & is.na(Bk1Bx1c) & is.na(Bk2Bx2a) & is.na(Bk2Bx2b)  & is.na(Bk2Bx2c)) %>%
-  mutate(Reason = "HGSize or HGSize2 reported ")
-
-#pull out the data has has lat longs reported INSTEAD of blocks
-LatFilter  <- BlkFilterHGSIZERemoved %>%  filter(is.na(Bk1Bx1a) & is.na(Bk1Bx1b) & is.na(Bk1Bx1c) & is.na(Bk2Bx2a)  & is.na(Bk2Bx2b) & is.na(Bk2Bx2c) & !is.na(ddlat) & is.na(HGSIZE) & is.na(hgsize2)) %>%
-  mutate(ddlong = ddlong*-1)
-
-
-
-# qa the lat long filter, there is alot of bad coordinates
-notused7 = LatFilter %>%
-  filter(ddlat > 50 | ddlong < -150) %>%
-  mutate(Reason = "Bad COORDS REPORTED")
-
-LatFilter = LatFilter %>%
-  filter(ddlat < 50 & ddlong > -150)
-
-# convert data with coordinates reported to spatial dataframe, plotted by the coordinates
-coords.SP <- st_as_sf(LatFilter, coords = c("ddlong", "ddlat"), crs = 4326, remove = FALSE)
-
-# bring in the block shapefile from lookup folder
-blocks.SP <- st_read(here("Lookups", "MAN_CA_CRFS_microblocks2013.shp"))
-# change projection of blocks to WGS84 (what the coordinates are)
-blocks.SP = st_transform(blocks.SP, crs = st_crs(coords.SP)) 
-blocks.SP = select(blocks.SP, NM_INDEX)
-
-# block feature has some overlap so need to remove sphereical geometry requirements (arc does this on the fly when loaded into PRO)
-sf_use_s2(FALSE)
-
-# create on the fly map to review coordinates, WHY ARE SO MANY SO BAD?
-leaflet() %>%
-  addTiles() %>%
-  addProviderTiles("Esri.WorldTopoMap", group = "Topo") %>%
-  addCircleMarkers(data=coords.SP)
-
-# spatial join to get corresponding block data
-coords_wblocks.SP = st_join(coords.SP, blocks.SP, left = TRUE)
-
-# convert back to dataframe
-coords_wblocks = coords_wblocks.SP %>%
-  st_drop_geometry() %>%
-  mutate(Bk1Bx1a = NM_INDEX) %>%
-  select(colnames(BlkFilter))
-
-# remove any data that did not get blocks after join
-notused8 = filter(coords_wblocks, is.na(Bk1Bx1a)) %>%
-  mutate(Reason = "No fishing block overlapped with coordinate.")
-
-#only data that had a block joined
-coords_wblocks = filter(coords_wblocks, !is.na(Bk1Bx1a))
-
-# recombine the data that had a block reported to the data that had coordinates (and now a joined block)
-all_locations = rbind(BlkFilter, coords_wblocks)
-
-# this counts the number of UNIQUE blocks reported in each row of data, simplifies the long repeated lines in WINNS code
-all_locations <- cbind(all_locations, total_blocks = apply(all_locations[, Bk1Bx1a:Bk2Bx2c], 1, function(x)length(unique(x[!is.na(x)]))))
 
 # Part 2 Aggregate Block Data ---------------------------------------------
 
 # clean up fish and wight fields so NAs are 0s
-dat <- all_locations %>% 
+dat <- oc_species_loc %>% 
   mutate(fish = ifelse(!is.na(FSHINSP), FSHINSP, 0), 
          weight = as.numeric(ifelse(is.na(WGT) | WGT == "WGT", 0, WGT))) %>%
   select(-WGT)
@@ -278,7 +100,14 @@ df  <- df %>%
 # sort fish and weight into released alive, released dead and kept based on DISP3 code (dont think this is necessary since this is observed data so everything is kept)c
 disp_summary = df%>%
   group_by(DISP3) %>%
-  count()
+  count() %>%
+  mutate(sorted = case_when(DISP3 %in% 1:2 | DISP3 %in% 7:9 ~ 'Released Alive',
+                            DISP3 %in% 6 ~ 'Released Dead',
+                            DISP3 %in% 3:5 ~ ' Kept')) %>%
+  mutate(table = 'Observed Catch 04-15') %>%
+  select(table, sorted, DISP3, n) %>%
+  arrange(DISP3)
+
 
 oc_sorted <- df %>% 
   mutate(FishPerBlock = ifelse(!is.na(FishPerBlock), FishPerBlock/freq_id, 0),
@@ -303,12 +132,12 @@ oc_by_id_agg_04_15 = by_block %>%
             Ob_Kept  = sum(Ob.Kept), 
             Ob_AvKWgt = mean(Ob.KWgt, na.rm=TRUE),
             n = n()) %>%
-  mutate(Total_Fish_Caught = Ob_ReleasedAlive + Ob_ReleasedDead + Ob_Kept) %>%
+  mutate(Total_Obs_Fish_Caught = Ob_ReleasedAlive + Ob_ReleasedDead + Ob_Kept) %>%
   rename(Ob_Weighed_Fish = freq_id)
 
 
-notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason), unique(notused4$Reason), unique(notused5$Reason), unique(notused6$Reason), unique(notused7$Reason), unique(notused8$Reason), unique(notused9$Reason)), 
-                             c(nrow(notused), nrow(notused2), nrow(notused3), nrow(notused4), nrow(notused5), nrow(notused6), nrow(notused7), nrow(notused8), nrow(notused9)))
+notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason)), 
+                             c(nrow(notused), nrow(notused2), nrow(notused3)))
 names(notused_summary) = c("Reason", "Count")
 
 
