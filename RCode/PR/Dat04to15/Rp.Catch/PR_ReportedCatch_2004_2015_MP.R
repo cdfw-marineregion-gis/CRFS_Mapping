@@ -18,7 +18,7 @@ library(leaflet)
 options(scipen = 999)
 
 # to put the cart before the horse, this line is required when sourcing multiple R scripts. The plan is to run all required catch and effort scripts in a "master" script to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. Youll see it in the other scripts as well.
-rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "rc_by_id_agg_04_15", "oc_by_id_agg_16_19", "oc_by_id_agg_99_03")])
+rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "rc_by_id_agg_04_15", 'all_locations')])
 
 # sources the script that is used to clean up the i8 table, returns a single variable 'all_locations' that provides the cleanup blocks at the ID level. Went through a series of filters as well. See other script for more information. 
 source(here('RCode', "PR", "Locations", 'PR_Location.R'))
@@ -66,7 +66,7 @@ nrow(rc) == (nrow(rc_species) + nrow(notused2))
 
 rc_species_loc <- rc_species %>%
   inner_join(all_locations, by = c("id"= "id_loc"))  %>% 
-  select(id, date, month, year, SP_CODE, ALPHA5, Common_Name, TripType_Description, prim1, prim2, SP_CODE, MODE_F, CNTRBTRS, DISPO, NUM_FISH, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, HGSIZE, hgsize2, total_blocks)
+  select(id, ID_CODE, date, month, year, SP_CODE, ALPHA5, Common_Name, TripType_Description, prim1, prim2, SP_CODE, MODE_F, CNTRBTRS, DISPO, NUM_FISH, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, HGSIZE, hgsize2, total_blocks)
 
 notused3 <- rc_species %>%
   anti_join(all_locations, by = c("id"= "id_loc")) %>%
@@ -119,10 +119,10 @@ by_block = rc_final %>%
   filter(!is.na(Block))
 
 rc_by_id_agg_04_15 = by_block %>%
-  group_by(id, date, month, year, Block,  SP_CODE, Common_Name) %>%
-  summarise(Rep_ReleasedAlive = sum(Rep.RelAlive), 
-            Rep_ReleasedDead = sum(Rep.RelDead), 
-            Rep_Kept  = sum(Rep.Catch)) %>%
+  group_by(id, ID_CODE, date, month, year, Block,  SP_CODE, Common_Name) %>%
+  summarise(Rep_ReleasedAlive = sum(Rep.RelAlive, na.rm = T), 
+            Rep_ReleasedDead = sum(Rep.RelDead, na.rm = T), 
+            Rep_Kept  = sum(Rep.Catch, na.rm = T)) %>%
   mutate(Total_Rep_Fish_Caught = Rep_ReleasedAlive +Rep_ReleasedDead  + Rep_Kept)
 
 # create summary of data that is not used and the provided reason
