@@ -202,4 +202,3 @@ names(notused_summary) = c("Reason", "Count")
 write.csv(all_locations, "Outputs/location_cleaned.csv", na = "", row.names = F)
 write.csv(notused_summary, "Outputs/location_notusedsummary.csv", na = "", row.names = F)
 
-rm(list = ls()[!ls() %in% c("all_locations")])
