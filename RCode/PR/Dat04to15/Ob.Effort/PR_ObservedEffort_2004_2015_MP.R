@@ -18,12 +18,12 @@ library(here)
 library(sf)
 library(leaflet)
 options(scipen = 999)
-
+source(here('RCode', "PR", "Locations", 'PR_Location.R'))
 # this line is required when sourcing multiple R scripts. The plan is to run all required catch and effort scripts in a "master" script to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. Youll see it in the other scripts as well.
-rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "by_id_agg_04_15", "by_id_agg_16_19", "by_id_agg_99_03")])
+rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "rc_by_id_agg_04_15", 'all_locations')])
 
 # sources the script that is used to clean up the i8 table, returns a single variable 'all_locations' that provides the cleanup blocks at the ID level. Went through a series of filters as well. See other script for more information. 
-source(here('RCode', "PR", "Locations", 'PR_Location.R'))
+
 
 #read in the i1 table 
 oe = fread(file=here("RCode", "PR", "Dat04to15", "Data", "PR_i1_2004-2015_487087r.csv"), fill = T, na.string = c("",".") )
@@ -140,11 +140,12 @@ by_block = dat %>%
 # aggregate effort to the id-block-species level. This will later be aggreageted to the Triptype level but wanted to leave species in for now. INCLUDING PRIMARY AND SPLIT_PRIM IN THE GROUP CHANGES THE TOTAL NUMBER OF ROWS. NEED TO LOOK INTO THIS FURTHER. 
 oe_by_id_agg_04_15 = by_block %>%
   group_by(id, date, month, year, Block, Common_Name, TripType_Description, primary) %>%
-  summarise(DaysPerBlock = sum(DaysPerBlock, na.rm = T), 
-            CntrbPerBlock = mean(CntrbPerBlock, na.rm = T), 
-            VesselPerBlock = sum(VesselPerBlock, na.rm = T)) %>%
-  mutate(AnglerDays = CntrbPerBlock*DaysPerBlock) %>%
-  arrange(id)
+  summarise(Days = sum(DaysPerBlock, na.rm = T), 
+            Cntrbs = mean(CntrbPerBlock, na.rm = T), 
+            Vessels = sum(VesselPerBlock, na.rm = T)) %>%
+  mutate(AnglerDays = Cntrbs*Days) %>%
+  arrange(id) %>%
+  rename(id_noloc = id)
 
 # create summary of data that is not used and the provided reason
 notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason)), 
