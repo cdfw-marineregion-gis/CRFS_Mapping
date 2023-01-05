@@ -36,62 +36,71 @@ Sp <- Sp %>%
 
 
 # CPUA by ID --------------------------------------------------------------
-nrow(oc_by_id_agg_04_15)
-nrow(rc_by_id_agg_04_15)
-all_by_id = oc_by_id_agg_04_15 %>%
-  full_join(rc_by_id_agg_04_15, by = c("id", "SP_CODE", "Block", "Common_Name", "date", 'month', 'year')) %>%
-  left_join(Sp, by = c("Common_Name", "SP_CODE" = "PSMFC_Code")) %>%
-  mutate(id_noloc = substr(id, 1, nchar(id) - 1)) %>% #need to make sure there are no double digit locations, should realistically go back to original catch scripts
-  full_join(oe_by_id_agg_04_15, by = c("id_noloc" = "id", "Block", "date", 'month', 'year'), suffix = c("_catch", "_effort"))
-nrow(all_by_id)
-names(all_by_id)
 
-comp = all_by_id %>%
+all_by_id = oc_by_id_agg_04_15 %>%
+  full_join(rc_by_id_agg_04_15, by = c("id","ID_CODE", "SP_CODE", "Block", "Common_Name", "date", 'month', 'year')) %>%
+  left_join(Sp, by = c("Common_Name", "SP_CODE" = "PSMFC_Code")) %>%
+  full_join(oe_by_id_agg_04_15, by = c("ID_CODE" = "id_noloc", "Block", "date", 'month', 'year'), suffix = c("_catch", "_effort"))
+
+
+cpue_combos = all_by_id %>%
   group_by(Common_Name_catch, Common_Name_effort, TripType_Description_catch, TripType_Description_effort, primary) %>%
   count() %>%
   arrange(desc(n))
-sum(comp$n)
 
-write.csv(comp, "CPUE_combos.csv", na = "", row.names = F)
 
-catch_noeffort = filter(comp, !is.na(Common_Name_catch) & is.na(Common_Name_effort))
-sum(catch_noeffort$n)
-effort_nocatch = filter(comp, is.na(Common_Name_catch) & !is.na(Common_Name_effort))
-sum(effort_nocatch$n)
+catch_noeffort = filter(all_by_id, !is.na(Common_Name_catch) & is.na(Common_Name_effort)) # may need to be removed
+effort_nocatch = filter(all_by_id, is.na(Common_Name_catch) & !is.na(Common_Name_effort))
+notused= catch_noeffort %>%
+  mutate(Reason = "Catch was reported with no corresponding effort")
 
-# need to investigate these, have different FISHNSP
-test = all_by_id %>%
-  group_by(id, Block, Common_Name_catch, TripType_Description_effort, primary) %>%
-  count() %>%
-  filter(!is.na(id))
+cpua= all_by_id %>%
+  ungroup() %>%
+  filter(!(!is.na(Common_Name_catch) & is.na(Common_Name_effort))) %>%
+  select(id, date, month, year, Block, SP_CODE, Common_Name_catch, Common_Name_effort, TripType_Description_catch, TripType_Description_effort, primary, Ob_Weighed_Fish, Ob_AvKWgt, Ob_ReleasedDead, Ob_ReleasedAlive, Ob_Kept, Total_Obs_Fish_Caught, Rep_ReleasedAlive, Rep_ReleasedDead, Rep_Kept, Total_Rep_Fish_Caught, Days, Cntrbs, Vessels, AnglerDays)
 
-test = all_by_id %>%
-  mutate(CPUE_id = Total_Fish_Caught/AnglerDays) %>%
+
+# DEPENDING ON DISP3 OUTCOME CERTAIN AGGREGATES SHOULD BE INCLUDED VS REMOVED (REP ALIVE etc)
+cpua = cpua %>%
+  mutate(across(Ob_Weighed_Fish:AnglerDays, ~ifelse(is.na(.x),0,.x))) %>%
   mutate(fish_total_weight = Ob_AvKWgt*Ob_Weighed_Fish) %>%
-  group_by(year, Block, Common_Name_catch, Alpha, TripType_Description_effort) %>%
+  mutate(Total_Fish_Caught = Total_Obs_Fish_Caught + Total_Rep_Fish_Caught)
+
+# more infitiy to sort out 
+cpua = cpua %>%
+  group_by(year, Block, Common_Name_catch, TripType_Description_effort) %>%
   summarise(n_id = n(),
-            #CPUE_id_avg = mean(CPUE_id, na.rm = T),
+            Ob_ReleasedAlive = sum(Ob_ReleasedAlive, na.rm = T),
+            Ob_ReleasedDead = sum(Ob_ReleasedDead, na.rm = T),
+            Ob_Kept = sum(Ob_Kept, na.rm = T),
+            Rep_ReleasedAlive = sum(Rep_ReleasedAlive, na.rm = T),
+            Rep_ReleasedDead = sum(Rep_ReleasedDead, na.rm = T),
+            Rep_Kept = sum(Rep_Kept, na.rm = T),
             Total_Fish_Caught = sum(Total_Fish_Caught, na.rm = T),
             AnglerDays = sum(AnglerDays, na.rm = T),
+            Days = sum(Days, na.rm = T),
+            Cntrbs = sum(Cntrbs, na.rm = T),
+            Vessels = sum(Vessels, na.rm = T),
             fish_total_weight = sum(fish_total_weight, na.rm = T),
             fish_total_weighed = sum(Ob_Weighed_Fish, na.rm=T)) %>%
   mutate(Ob_AvKWgt = fish_total_weight/fish_total_weighed) %>%
-  mutate(CPUE_agg = Total_Fish_Caught/AnglerDays)
+  mutate(CPUA = Total_Fish_Caught/AnglerDays) %>%
+  select(-fish_total_weight, -fish_total_weighed)
 
-cpua_year_aggregated = test %>%
-  mutate(CPUE_agg = ifelse(is.infinite(CPUE_agg), 0, CPUE_agg))
+
+# need to look into infinite values
+cpua_year_aggregated = cpua %>%
+  mutate(CPUA = ifelse(is.infinite(CPUA), 0, CPUA))
 dat_long = cpua_year_aggregated 
 
 write.csv(dat_long, "Outputs/PR_CPUA.csv", row.names = F, na = "")
 
-dat_wide = cpua_year_aggregated %>%
-  pivot_wider(names_from = year, values_from = c("Total_Fish_Caught", "AnglerDays", "Ob_AvKWgt", "CPUE_agg" ), values_fill = 0)
-
-write.csv(dat_wide, "Outputs/PR_wide_CPUA.csv", row.names = F, na = "")
 
 
 
 
+
+#potential tool to query the data based on a block-species etc
 
 
 
@@ -101,105 +110,6 @@ write.csv(dat_wide, "Outputs/PR_wide_CPUA.csv", row.names = F, na = "")
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Observed Catch ----------------------------------------------------------
-
-#calculate the final results at the block, species, yearly level. Can modify to be at any other time frame that is included in the id level output (day or month)
-oc_block_final = oc_by_id_agg_04_15 %>%
-  mutate(fish_total_weight = Ob_AvKWgt*Ob_Weighed_Fish) %>%
-  group_by(Block, SP_CODE, year) %>%
-  summarise(Ob_ReleasedAlive = sum(Ob_ReleasedAlive, na.rm = T), 
-            Ob_ReleasedDead = sum(Ob_ReleasedDead), 
-            Ob_Kept  = sum(Ob_Kept, na.rm = T), 
-            fish_total_weight = sum(fish_total_weight),
-            fish_total_weighed = sum(Ob_Weighed_Fish),
-            Ob_sample_freq = n_distinct(id)) %>%
-  mutate(Ob_Total_Fish_Caught = Ob_ReleasedAlive + Ob_ReleasedDead + Ob_Kept) %>%
-  mutate(Ob_caught_per_sample = Ob_Total_Fish_Caught/Ob_sample_freq) %>%
-  mutate(Ob_AvKWgt = fish_total_weight/fish_total_weighed)
-
-
-before = nrow(oc_block_final)
-# join with species look up for trip type description
-oc_block_final = oc_block_final %>%
-  inner_join(Sp, by = c("SP_CODE" = "PSMFC_Code")) %>%
-  rename(sp_code = SP_CODE)
-
-#test to make sure duplicates were not created or lost
-before == nrow(oc_block_final)
-
-# Reported Catch ----------------------------------------------------------
-
-#aggreaget the final reported catch statistics to the Block, species and temporal level
-rc_block_final = rc_by_id_agg_04_15 %>%
-  group_by(Block, SP_CODE, year) %>%
-  summarise(Rep_ReleasedAlive = sum(Rep_ReleasedAlive, na.rm = T), 
-            Rep_ReleasedDead = sum(Rep_ReleasedDead, na.rm = T), 
-            Rep_Kept  = sum(Rep_Kept, na.rm = T), 
-            Rep_sample_freq = n_distinct(id)) %>%
-  mutate(Rep_Total_Fish_Caught = Rep_ReleasedAlive + Rep_ReleasedDead + Rep_Kept) %>%
-  mutate(Rep_caught_per_sample = Rep_Total_Fish_Caught/Rep_sample_freq)
-
-
-before = nrow(rc_block_final)
-rc_block_final = rc_block_final %>%
-  inner_join(Sp, by = c("SP_CODE" = "PSMFC_Code")) %>%
-  rename(sp_code = SP_CODE)
-
-before == nrow(rc_block_final)
-
-
-
-# Observed Effort ---------------------------------------------------------
-
-# effort is aggregated to the block, TRIPTYPE, and temporal level. This is because there is little match between targeting an "vermillion rockfish" and actually catching one. 
-oe_block_final = oe_by_id_agg_04_15 %>%
-  group_by(Block, TripType_Description, year) %>%
-  summarise(Ob_AnglerDays = sum(AnglerDays),
-            Ob_Vessels = sum(VesselPerBlock))
-
-#Joins together the three aggregated outputs. Catch by species, catch to effort by trip type
-
-final = oc_block_final %>%
-  full_join(rc_block_final, by = c("Block", "year", "sp_code", "Alpha", "TripType_Description", "Common_Name")) %>%
-  full_join(oe_block_final, by = c("Block", "year", "TripType_Description"))
-
-
-# CPUA = reported fish caught + observed fish caught at the species level / observed (maybe reported at some point) at the trip type effort
-cpua_year_aggregated = final %>%
-  select(Block, year, sp_code, Alpha, Common_Name, TripType_Description, Ob_Total_Fish_Caught, Rep_Total_Fish_Caught, Ob_AnglerDays, Ob_Vessels) %>%
-  mutate(Ob_Total_Fish_Caught = ifelse(is.na(Ob_Total_Fish_Caught), 0, Ob_Total_Fish_Caught)) %>%
-  mutate(Rep_Total_Fish_Caught = ifelse(is.na(Rep_Total_Fish_Caught), 0, Rep_Total_Fish_Caught)) %>%
-  mutate(Ob_AnglerDays = ifelse(is.na(Ob_AnglerDays), 0, Ob_AnglerDays)) %>%
-  mutate(Total_Fish_Caught = Ob_Total_Fish_Caught + Rep_Total_Fish_Caught) %>%
-  mutate(Total_Fish_Caught = ifelse(is.na(Total_Fish_Caught), 0, Total_Fish_Caught)) %>%
-  mutate(CPUA = Total_Fish_Caught/Ob_AnglerDays) %>%
-  arrange(Block, Common_Name, year)
-
-cpua_year_aggregated = cpua_year_aggregated %>%
-  mutate(CPUA = ifelse(is.infinite(CPUA), 0, CPUA))
-
-dat_long = cpua 
-
-write.csv(dat_long, "Outputs/PR_CPUA.csv", row.names = F, na = "")
-
-dat_wide = cpua %>%
-  pivot_wider(names_from = year, values_from = c("Total_Fish_Caught", "Ob_AnglerDays", "Ob_Vessels", "CPUA" ), values_fill = 0)
-
-write.csv(dat_wide, "Outputs/PR_wide_CPUA.csv", row.names = F, na = "")
 
 
 
