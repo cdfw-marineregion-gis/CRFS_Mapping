@@ -18,7 +18,7 @@ library(leaflet)
 options(scipen = 999)
 
 # to put the cart before the horse, this line is required when sourcing multiple R scripts. The plan is to run all required catch and effort scripts in a "master" script to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. Youll see it in the other scripts as well.
-rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "by_id_agg_04_15", "by_id_agg_16_19", "by_id_agg_99_03")])
+rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "rc_by_id_agg_04_15" ,'all_locations')])
 
 # sources the script that is used to clean up the i8 table, returns a single variable 'all_locations' that provides the cleanup blocks at the ID level. Went through a series of filters as well. See other script for more information. 
 source(here('RCode', "PR", "Locations", 'PR_Location.R'))
@@ -69,7 +69,7 @@ nrow(oc) == (nrow(oc_species) + nrow(notused2))
 # joining variable is the id, select required columns
 oc_species_loc <- oc_species %>%
   inner_join(all_locations, by = c("id"= "id_loc"))  %>% 
-  select(id, date, month, year, SP_CODE, ALPHA5, Common_Name, TripType_Description, DISP3, WGT, FSHINSP, HLDEPTH, HLDEPTH2, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, total_blocks)
+  select(id, ID_CODE, date, month, year, SP_CODE, ALPHA5, Common_Name, TripType_Description, DISP3, WGT, FSHINSP, HLDEPTH, HLDEPTH2, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, total_blocks)
 
 #pull out data that is lost in the join (id does not have any location data)
 notused3 <- oc_species %>%
@@ -126,12 +126,11 @@ by_block = oc_sorted %>%
 
 # aggregates to the id-block-species level the total number of fish caught and the average weight, this output is later used in another script to calculate different metrics but I thought there would be some utility in keeping things at the ID level (easily aggregate to a variety of temporal or sample level metrics)
 oc_by_id_agg_04_15 = by_block %>%
-  group_by(id, date, month, year, Block,  SP_CODE, FSHINSP, Common_Name, freq_id) %>%
-  summarise(Ob_ReleasedAlive = sum(Ob.RelAlive), 
-            Ob_ReleasedDead = sum(Ob.RelDead), 
-            Ob_Kept  = sum(Ob.Kept), 
-            Ob_AvKWgt = mean(Ob.KWgt, na.rm=TRUE),
-            n = n()) %>%
+  group_by(id, ID_CODE, date, month, year, Block,  SP_CODE, FSHINSP, Common_Name, freq_id) %>%
+  summarise(Ob_ReleasedAlive = sum(Ob.RelAlive, na.rm = T), 
+            Ob_ReleasedDead = sum(Ob.RelDead, na.rm = T), 
+            Ob_Kept  = sum(Ob.Kept, na.rm = T), 
+            Ob_AvKWgt = mean(Ob.KWgt, na.rm=TRUE)) %>%
   mutate(Total_Obs_Fish_Caught = Ob_ReleasedAlive + Ob_ReleasedDead + Ob_Kept) %>%
   rename(Ob_Weighed_Fish = freq_id)
 
