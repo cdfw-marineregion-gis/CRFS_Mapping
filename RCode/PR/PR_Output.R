@@ -57,7 +57,7 @@ notused= catch_noeffort %>%
 cpua= all_by_id %>%
   ungroup() %>%
   filter(!(!is.na(Common_Name_catch) & is.na(Common_Name_effort))) %>%
-  select(id, date, month, year, Block, SP_CODE, Common_Name_catch, Common_Name_effort, TripType_Description_catch, TripType_Description_effort, primary, Ob_Weighed_Fish, Ob_AvKWgt, Ob_ReleasedDead, Ob_ReleasedAlive, Ob_Kept, Total_Obs_Fish_Caught, Rep_ReleasedAlive, Rep_ReleasedDead, Rep_Kept, Total_Rep_Fish_Caught, Days, Cntrbs, Vessels, AnglerDays)
+  select(id, date, month, year, Block, SP_CODE, Common_Name_catch, Common_Name_effort, TripType_Description_catch, TripType_Description_effort, primary, Ob_Weighed_Fish, Ob_AvKWgt, Ob_Kept, Total_Obs_Fish_Caught, Rep_Released, Rep_Kept, Total_Rep_Fish_Caught, Days, Cntrbs, Vessels, AnglerDays)
 
 
 # DEPENDING ON DISP3 OUTCOME CERTAIN AGGREGATES SHOULD BE INCLUDED VS REMOVED (REP ALIVE etc)
@@ -70,11 +70,8 @@ cpua = cpua %>%
 cpua = cpua %>%
   group_by(year, Block, Common_Name_catch, TripType_Description_effort) %>%
   summarise(n_id = n(),
-            Ob_ReleasedAlive = sum(Ob_ReleasedAlive, na.rm = T),
-            Ob_ReleasedDead = sum(Ob_ReleasedDead, na.rm = T),
             Ob_Kept = sum(Ob_Kept, na.rm = T),
-            Rep_ReleasedAlive = sum(Rep_ReleasedAlive, na.rm = T),
-            Rep_ReleasedDead = sum(Rep_ReleasedDead, na.rm = T),
+            Rep_Released = sum(Rep_Released, na.rm = T),
             Rep_Kept = sum(Rep_Kept, na.rm = T),
             Total_Fish_Caught = sum(Total_Fish_Caught, na.rm = T),
             AnglerDays = sum(AnglerDays, na.rm = T),
@@ -83,9 +80,11 @@ cpua = cpua %>%
             Vessels = sum(Vessels, na.rm = T),
             fish_total_weight = sum(fish_total_weight, na.rm = T),
             fish_total_weighed = sum(Ob_Weighed_Fish, na.rm=T)) %>%
+  mutate(Kept = Ob_Kept + Rep_Kept) %>%
   mutate(Ob_AvKWgt = fish_total_weight/fish_total_weighed) %>%
   mutate(CPUA = Total_Fish_Caught/AnglerDays) %>%
-  select(-fish_total_weight, -fish_total_weighed)
+  select(-fish_total_weight, -fish_total_weighed, -Ob_Kept, -Rep_Kept) %>%
+  select(year, Block, Common_Name_catch, TripType_Description_effort, n_samples = n_id, Rep_Released, Kept, Total_Fish_Caught, AnglerDays, Days, Cntrbs, Vessels, Ob_AvKWgt, CPUA)
 
 
 # need to look into infinite values
@@ -94,75 +93,4 @@ cpua_year_aggregated = cpua %>%
 dat_long = cpua_year_aggregated 
 
 write.csv(dat_long, "Outputs/PR_CPUA.csv", row.names = F, na = "")
-
-
-
-
-
-
-#potential tool to query the data based on a block-species etc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 
-# # testing code to the access database: can ignore ------------------------------------------------
-# 
-# 
-# raw_oe  = fread(file=here("RCode", "PR", "Dat04to15", "Data", "PR_i1_2004-2015_487087r.csv"), fill = T, na.string = c("",".") )
-# 
-# test = oc_block_final %>%
-#   inner_join(oe_block_final, by = c("Block", "year", "TripType_Description")) %>%
-#   mutate(CPUA = Total_Fish_Caught/Ob_AnglerDays)
-# 
-# 
-# 
-# 
-# test = dat_years %>%
-#   filter(year == 2007) %>%
-#   filter(Alpha %in% c("SCCAB", "GRNKP", "GRNRK", "SBKLP", "LNGCD", "SCRCA", "SHEEP")| startsWith(Alpha, "RF"))
-# 
-# oe_test = oe_by_id_agg_04_15 %>%
-#   filter(year == 2007) %>%
-#   mutate(sp_code =as.numeric(sp_code)) %>%
-#   left_join(select(Sp, PSMFC_Code, Alpha), by = c("sp_code" = "PSMFC_Code")) %>%
-#   filter(Alpha %in% c("SCCAB", "GRNKP", "GRNRK", "SBKLP", "LNGCD", "SCRCA", "SHEEP")| startsWith(Alpha, "RF"))
-# 
-# oc_test = oc_by_id_agg_04_15 %>%
-#   filter(year == 2007) %>%
-#   mutate(SP_CODE =as.numeric(SP_CODE)) %>%
-#   left_join(select(Sp, PSMFC_Code, Alpha), by = c("SP_CODE" = "PSMFC_Code")) %>%
-#   filter(Alpha %in% c("SCCAB", "GRNKP", "GRNRK", "SBKLP", "LNGCD", "SCRCA", "SHEEP")| startsWith(Alpha, "RF"))
-# 
-# test2 = test %>%
-#   group_by(Block, year) %>%
-#   summarise(Total_Fish_Caught = sum(Total_Fish_Caught),
-#             Ob_AnglerDays = mean(Ob_AnglerDays)) %>%
-#   mutate(CPUA = Total_Fish_Caught/Ob_AnglerDays )
-# 
-# ag = dat_years %>%
-#   filter(year==2007) %>%
-#   group_by(Alpha, Common_Name) %>%
-#   count()
-# 
-# 
-# # id that is very different 1012020071107014, how to split up effort
-# 
-# 
-# #Cabezon, Greenling, Kelpbass, Lingcod, Rockfish, Scorpionfish, and Sheephead 
 
