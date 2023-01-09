@@ -89,6 +89,12 @@ dat <- oc_species_loc %>%
 dat <- dat %>% 
   mutate(FishPerBlock = fish/total_blocks)
 
+fishinspected = dat %>% 
+  select(id, FSHINSP) %>%
+  unique() %>%
+  group_by(id) %>%
+  count()
+
 # Create tally for groups of identical records for id_n, SP_CODE and FSHINSP. Data has a unique row for each weight data entered. Need to account for this in total fish count. THIS IS OLD LOGIC NEED TO CONFIRM or MAYBE SIMPLIFY WHY FSHINSP IS INCLUDED
 df  <- dat %>% mutate(unique_id = paste(id, SP_CODE, FSHINSP, sep="_"))
 dups = df %>% group_by(unique_id) %>% summarise(freq_id = n())
@@ -97,27 +103,13 @@ dups = df %>% group_by(unique_id) %>% summarise(freq_id = n())
 df  <- df %>%
   inner_join(dups, by= "unique_id")
 
-# sort fish and weight into released alive, released dead and kept based on DISP3 code (dont think this is necessary since this is observed data so everything is kept)c
-disp_summary = df%>%
-  group_by(DISP3) %>%
-  count() %>%
-  mutate(sorted = case_when(DISP3 %in% 1:2 | DISP3 %in% 7:9 ~ 'Released Alive',
-                            DISP3 %in% 6 ~ 'Released Dead',
-                            DISP3 %in% 3:5 ~ ' Kept')) %>%
-  mutate(table = 'Observed Catch 04-15') %>%
-  select(table, sorted, DISP3, n) %>%
-  arrange(DISP3)
 
-
+# removed sorting by DISP3 codes, everything is sorted to kept
 oc_sorted <- df %>% 
   mutate(FishPerBlock = ifelse(!is.na(FishPerBlock), FishPerBlock/freq_id, 0),
-         weight = ifelse(!is.na(weight), weight, 0),
-         Ob.RelAlive = ifelse(DISP3 %in% 1:2 | DISP3 %in% 7:9, FishPerBlock, 0 ),
-         Ob.AvRelAliveWgt = ifelse(DISP3 %in% 1:2 | DISP3 %in% 7:9, weight, 0), 
-         Ob.RelDead = ifelse(DISP3 %in% 6:6, FishPerBlock, 0 ), 
-         Ob.AvRelDeadWgt  = ifelse(DISP3 %in% 6:6, weight, 0),
-         Ob.Kept = ifelse(DISP3 %in% 3:5, FishPerBlock, 0),
-         Ob.KWgt = ifelse(DISP3 %in% 3:5, weight, 0))
+         weight = ifelse(!is.na(weight), weight, 0)) %>%
+  mutate(Ob.Kept = FishPerBlock,
+         Ob.KWgt = weight)
 
 # pivot the data so each block reported for a single id has its own row. Counts are already normalized by blocks visited so this will not double count anything but greatly simplifies the logic that WINN uses to generate summary statistics
 by_block = oc_sorted %>%
@@ -127,11 +119,9 @@ by_block = oc_sorted %>%
 # aggregates to the id-block-species level the total number of fish caught and the average weight, this output is later used in another script to calculate different metrics but I thought there would be some utility in keeping things at the ID level (easily aggregate to a variety of temporal or sample level metrics)
 oc_by_id_agg_04_15 = by_block %>%
   group_by(id, ID_CODE, date, month, year, Block,  SP_CODE, FSHINSP, Common_Name, freq_id) %>%
-  summarise(Ob_ReleasedAlive = sum(Ob.RelAlive, na.rm = T), 
-            Ob_ReleasedDead = sum(Ob.RelDead, na.rm = T), 
-            Ob_Kept  = sum(Ob.Kept, na.rm = T), 
+  summarise(Ob_Kept  = sum(Ob.Kept, na.rm = T), 
             Ob_AvKWgt = mean(Ob.KWgt, na.rm=TRUE)) %>%
-  mutate(Total_Obs_Fish_Caught = Ob_ReleasedAlive + Ob_ReleasedDead + Ob_Kept) %>%
+  mutate(Total_Obs_Fish_Caught =  Ob_Kept) %>%
   rename(Ob_Weighed_Fish = freq_id)
 
 
