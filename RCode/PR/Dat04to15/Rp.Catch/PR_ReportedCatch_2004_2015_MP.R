@@ -78,24 +78,12 @@ dat <- rc_species_loc %>%
   mutate(FishPerBlock = NUM_FISH/total_blocks)
 
 
-disp_summary = dat %>%
-  group_by(DISPO) %>%
-  count() %>%
-  mutate(sorted = case_when(DISPO %in% 1:2 | DISPO %in% 7:9 ~ 'Released Alive',
-                            DISPO %in% 6 ~ 'Released Dead',
-                            DISPO %in% 3:5 ~ ' Kept')) %>%
-  mutate(table = 'Reported Catch 04-15') %>%
-  select(table, sorted, DISPO, n) %>%
-  arrange(DISPO)
-
-# sort fish in Released Alive, Released Dead, and kept by DISPO code
+unique(dat$DISPO)
+# sort fish in Released or kept by DISPO code
 dat   <- dat %>% 
-  mutate(FishPerBlock = ifelse(!is.na(FishPerBlock), FishPerBlock, 0), 
-         Rep.RelAlive  = ifelse(DISPO %in% 1:2 | DISPO %in% 7:9, FishPerBlock, 0 ), 
-         Rep.RelDead = ifelse(DISPO %in% 6:6, FishPerBlock, 0 ), 
-         Rep.Catch = ifelse(DISPO %in% 3:5, FishPerBlock, 0 ), 
-         numfish = ifelse(is.na(NUM_FISH), 0, NUM_FISH))
-
+  mutate(FishPerBlock = ifelse(!is.na(FishPerBlock), FishPerBlock, 0)) %>%
+  mutate(Rep.Released  = ifelse(DISPO %in% c(1,2,6), FishPerBlock, 0), 
+         Rep.Kept = ifelse(DISPO %in% c(3,4,5,7), FishPerBlock, 0))
 
 # CONTRBTRS field creates duplicate entries for the same datapoint
 duplicates = dat %>%
@@ -120,10 +108,9 @@ by_block = rc_final %>%
 
 rc_by_id_agg_04_15 = by_block %>%
   group_by(id, ID_CODE, date, month, year, Block,  SP_CODE, Common_Name) %>%
-  summarise(Rep_ReleasedAlive = sum(Rep.RelAlive, na.rm = T), 
-            Rep_ReleasedDead = sum(Rep.RelDead, na.rm = T), 
-            Rep_Kept  = sum(Rep.Catch, na.rm = T)) %>%
-  mutate(Total_Rep_Fish_Caught = Rep_ReleasedAlive +Rep_ReleasedDead  + Rep_Kept)
+  summarise(Rep_Released = sum(Rep.Released, na.rm = T), 
+            Rep_Kept  = sum(Rep.Kept, na.rm = T)) %>%
+  mutate(Total_Rep_Fish_Caught = Rep_Released + Rep_Kept)
 
 # create summary of data that is not used and the provided reason
 notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason), unique(notused4$Reason)), 
