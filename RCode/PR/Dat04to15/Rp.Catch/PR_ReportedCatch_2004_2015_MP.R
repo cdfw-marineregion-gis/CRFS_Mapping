@@ -66,7 +66,7 @@ nrow(rc) == (nrow(rc_species) + nrow(notused2))
 
 rc_species_loc <- rc_species %>%
   inner_join(all_locations, by = c("id"= "id_loc"))  %>% 
-  select(id, ID_CODE, date, month, year, SP_CODE, ALPHA5, Common_Name, TripType_Description, prim1, prim2, SP_CODE, MODE_F, CNTRBTRS, DISPO, NUM_FISH, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, HGSIZE, hgsize2, total_blocks)
+  select(id, ID_CODE, date, month, year, SP_CODE, ALPHA5, Common_Name, TripType_Description, prim1, prim2, SP_CODE, MODE_F, CNTRBTRS, DISPO, NUM_FISH, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, extrablock7,  extrablock8,  extrablock9,  extrablock10, extrablock11, HGSIZE, hgsize2, total_blocks)
 
 notused3 <- rc_species %>%
   anti_join(all_locations, by = c("id"= "id_loc")) %>%
@@ -103,7 +103,7 @@ rc_final = dat %>%
 
 # pivot so each block-id has its own row. Makes summaries easier. Already normalized to fish per block so no double counting will occur
 by_block = rc_final %>%
-  pivot_longer(Bk1Bx1a:Bk2Bx2c, names_to = "col", values_to = 'Block') %>%
+  pivot_longer(Bk1Bx1a:extrablock11, names_to = "col", values_to = 'Block') %>%
   filter(!is.na(Block))
 
 rc_by_id_agg_04_15 = by_block %>%
