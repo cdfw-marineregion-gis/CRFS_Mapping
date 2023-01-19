@@ -1,8 +1,7 @@
 # PR Observed Effort 2004_2015 ---------------------------------------------
 
-# Michael Patton's simplification of original script (PR_ObservedEffort_2004_2015km Part 1 and Part2.R)
-
-
+# Michael Patton (michael.patton@wildlife.ca.gov)
+# script that processes the effort i1 table to provide a cleaned up and aggregated effort for each ID
 
 #USER INPUT:
 # copy path to where you downloaded the shared CRFS_Mapping folder between the ()
@@ -15,15 +14,14 @@ library(stringi)
 library(tidyverse)
 library(lubridate)
 library(here)
-library(sf)
-library(leaflet)
 options(scipen = 999)
-source(here('RCode', "PR", "Locations", 'PR_Location.R'))
-# this line is required when sourcing multiple R scripts. The plan is to run all required catch and effort scripts in a "master" script to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. Youll see it in the other scripts as well.
-rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "rc_by_id_agg_04_15", 'all_locations')])
 
 # sources the script that is used to clean up the i8 table, returns a single variable 'all_locations' that provides the cleanup blocks at the ID level. Went through a series of filters as well. See other script for more information. 
+source(here('RCode', "PR", "Locations", 'PR_Location.R'))
 
+
+# this line is required when sourcing multiple R scripts. The plan is to run all required catch and effort scripts in a "master" script to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. Youll see it in the other scripts as well.
+rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "rc_by_id_agg_04_15", 'all_locations')])
 
 #read in the i1 table 
 oe = fread(file=here("RCode", "PR", "Dat04to15", "Data", "PR_i1_2004-2015_487087r.csv"), fill = T, na.string = c("",".") )
@@ -64,7 +62,7 @@ prims_stat = oe %>%
 
 # cleans up id, date, month and year. 
 # add in prim1 vs prim2 logic where prim1 is only used unless prim1 == 'Invertebrates"
-#Selects only relevant columns (NO LOCN IN EFFORT THIS WILL MAKE JOINS WITH CATCH COMPLICATED)
+#Selects only relevant columns 
 oe <- oe %>% 
   mutate(id = as.character(ID_CODE), 
          date = ymd(stri_sub(ID_CODE, 6, 13)), 
@@ -82,8 +80,7 @@ oe <- oe %>%
   mutate(DAYSF = ifelse(DAYSF == 0 & CNTRBTRS > 0, 1, DAYSF))
 
 
-
-#Create species table by extracting data from SpeciesList.csv and merge species data with dfr_angrep data frame 
+    #Create species table by extracting data from SpeciesList.csv and merge species data with dfr_angrep data frame 
 Sp<- fread(here("Lookups", "SpeciesList210510.csv" )) 
 Sp<- Sp %>% 
   select(ALPHA5, PSMFC_Code, Common_Name, TripType_Description) %>% 
@@ -133,13 +130,13 @@ dat <- oe_species_loc %>%
 
 # pivot the data so each block reported for a single id has its own row. Counts are already normalized by blocks visited so this will not double count anything but greatly simplifies the logic that WINN uses to generate summary statistics
 by_block = dat %>%
-  pivot_longer(Bk1Bx1a:Bk2Bx2c, names_to = "col", values_to = 'Block') %>%
+  pivot_longer(Bk1Bx1a:extrablock11, names_to = "col", values_to = 'Block') %>%
   filter(!is.na(Block))
 
 
-# aggregate effort to the id-block-species level. This will later be aggreageted to the Triptype level but wanted to leave species in for now. INCLUDING PRIMARY AND SPLIT_PRIM IN THE GROUP CHANGES THE TOTAL NUMBER OF ROWS. NEED TO LOOK INTO THIS FURTHER. 
+# aggregate effort to the id-block-species level. This will later be aggregated to the Triptype level but wanted to leave species in for now. 
 oe_by_id_agg_04_15 = by_block %>%
-  group_by(id, date, month, year, Block, Common_Name, TripType_Description, primary) %>%
+  group_by(id, date, month, year, Block, Common_Name, TripType_Description) %>%
   summarise(Days = sum(DaysPerBlock, na.rm = T), 
             Cntrbs = mean(CntrbPerBlock, na.rm = T), 
             Vessels = sum(VesselPerBlock, na.rm = T)) %>%
