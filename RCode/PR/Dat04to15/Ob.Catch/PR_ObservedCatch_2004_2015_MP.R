@@ -1,7 +1,6 @@
 # PR Observed Catch 2004_2015 ---------------------------------------------
 
-# Michael Patton's simplification of original script (PR_ObservedCatch_2004_2015km Part 1 and Part 2.R)
-#11/22/2022
+# Michael Patton's (michael.patton@wildlife.ca.gov) R script to clean and aggregate the CRFS observed catch data (i3 table) for the years 2004-2015
 
 # copy path to where you downloaded the shared CRFS_Mapping folder between the ()
 working_directory = r"(C:\Users\MPatton\OneDrive - California Department of Fish and Wildlife\CRFS_Mapping)"
@@ -17,22 +16,22 @@ library(sf)
 library(leaflet)
 options(scipen = 999)
 
-# to put the cart before the horse, this line is required when sourcing multiple R scripts. The plan is to run all required catch and effort scripts in a "master" script to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. Youll see it in the other scripts as well.
+# this line is required when sourcing multiple R scripts. PR_Output.R runs this and the other cleaning scripts to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. 
 rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "rc_by_id_agg_04_15" ,'all_locations')])
 
-# sources the script that is used to clean up the i8 table, returns a single variable 'all_locations' that provides the cleanup blocks at the ID level. Went through a series of filters as well. See other script for more information. 
+# sources the script that is used to clean up the i8 table, returns a single variable 'all_locations' that provides the cleanup blocks at the ID level. Went through a series of filters as well. See PR_Location.R for more information. 
 source(here('RCode', "PR", "Locations", 'PR_Location.R'))
 
 #  read in i3 table: sampler observed catch data. the here function provides the relative path to where the data is saved. 
 oc <- fread(file = here("RCode", "PR", "Dat04to15", "Data", "PR_i3_2004-2015_759607r.csv"), fill = TRUE, na.string = c("",".")) 
 
-# remove any data that does not have a valid SP_CODE, these "notused" objects will eventually be combined into a separate output for review
+# remove any data that does not have a valid SP_CODE, these "notused" variables are later summarized in a separate output
 notused = oc %>%
   filter(is.na(as.numeric(SP_CODE)))  %>%
   mutate(Reason = "SP_CODE is not valid.")
 unique(notused$SP_CODE)
 
-locn_summary = oc %>% group_by(locn) %>% count()
+locn_summary = oc %>% group_by(ID_CODE, locn) %>% count()
 # create a new id that combines the existing ID code with the location number. Extract the year, month and date. Select only the required columns. The NAs introduced by coercion warning message is for the SP Codes that are included in the not used object below. 
 oc <- oc %>% 
   mutate(SP_CODE = as.numeric(SP_CODE)) %>%
@@ -41,7 +40,7 @@ oc <- oc %>%
          id = paste(ID_CODE, locn, sep= ""), 
          date = ymd(stri_sub(ID_CODE, 6, 13)), 
          month = month(date)) %>%  
-  select(id, date, month, year = YEAR, ALPHA5, SP_CODE, MODE_F, CNTRBTRS, DISP3, WGT, FSHINSP, HRSF)
+  select(id, locn, date, month, year = YEAR, ALPHA5, SP_CODE, MODE_F, CNTRBTRS, DISP3, WGT, FSHINSP, HRSF)
 
 #Create species table by extracting data from SpeciesList.csv
 Sp<- fread(here("Lookups", "SpeciesList210510.csv" )) 
@@ -69,7 +68,7 @@ nrow(oc) == (nrow(oc_species) + nrow(notused2))
 # joining variable is the id, select required columns
 oc_species_loc <- oc_species %>%
   inner_join(all_locations, by = c("id"= "id_loc"))  %>% 
-  select(id, ID_CODE, date, month, year, SP_CODE, ALPHA5, Common_Name, TripType_Description, DISP3, WGT, FSHINSP, HLDEPTH, HLDEPTH2, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, total_blocks)
+  select(id, ID_CODE, locn, date, month, year, SP_CODE, ALPHA5, Common_Name, TripType_Description, DISP3, WGT, FSHINSP, HLDEPTH, HLDEPTH2, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, extrablock7,  extrablock8,  extrablock9,  extrablock10, extrablock11, total_blocks)
 
 #pull out data that is lost in the join (id does not have any location data)
 notused3 <- oc_species %>%
@@ -97,7 +96,7 @@ fishinspected = dat %>%
 
 # Create tally for groups of identical records for id_n, SP_CODE and FSHINSP. Data has a unique row for each weight data entered. Need to account for this in total fish count. THIS IS OLD LOGIC NEED TO CONFIRM or MAYBE SIMPLIFY WHY FSHINSP IS INCLUDED
 df  <- dat %>% mutate(unique_id = paste(id, SP_CODE, FSHINSP, sep="_"))
-dups = df %>% group_by(unique_id) %>% summarise(freq_id = n())
+dups = df %>% group_by(unique_id) %>% summarise(Ob_Weighed_Fish = n())
 
 # join the freq_id counter to table so that total fish can be divided
 df  <- df %>%
@@ -106,23 +105,22 @@ df  <- df %>%
 
 # removed sorting by DISP3 codes, everything is sorted to kept
 oc_sorted <- df %>% 
-  mutate(FishPerBlock = ifelse(!is.na(FishPerBlock), FishPerBlock/freq_id, 0),
+  mutate(FishPerBlock = ifelse(!is.na(FishPerBlock), FishPerBlock/Ob_Weighed_Fish, 0),
          weight = ifelse(!is.na(weight), weight, 0)) %>%
   mutate(Ob.Kept = FishPerBlock,
          Ob.KWgt = weight)
 
 # pivot the data so each block reported for a single id has its own row. Counts are already normalized by blocks visited so this will not double count anything but greatly simplifies the logic that WINN uses to generate summary statistics
 by_block = oc_sorted %>%
-  pivot_longer(Bk1Bx1a:Bk2Bx2c, names_to = "col", values_to = 'Block') %>%
+  pivot_longer(Bk1Bx1a:extrablock11, names_to = "col", values_to = 'Block') %>%
   filter(!is.na(Block))
 
 # aggregates to the id-block-species level the total number of fish caught and the average weight, this output is later used in another script to calculate different metrics but I thought there would be some utility in keeping things at the ID level (easily aggregate to a variety of temporal or sample level metrics)
 oc_by_id_agg_04_15 = by_block %>%
-  group_by(id, ID_CODE, date, month, year, Block,  SP_CODE, FSHINSP, Common_Name, freq_id) %>%
+  group_by(id, ID_CODE, locn, date, month, year, Block,  SP_CODE, FSHINSP, Common_Name, Ob_Weighed_Fish) %>%
   summarise(Ob_Kept  = sum(Ob.Kept, na.rm = T), 
             Ob_AvKWgt = mean(Ob.KWgt, na.rm=TRUE)) %>%
-  mutate(Total_Obs_Fish_Caught =  Ob_Kept) %>%
-  rename(Ob_Weighed_Fish = freq_id)
+  mutate(Total_Obs_Fish_Caught =  Ob_Kept) 
 
 
 notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason)), 
