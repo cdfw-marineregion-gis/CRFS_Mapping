@@ -40,11 +40,12 @@ Sp <- Sp %>%
 all_by_id = oc_by_id_agg_04_15 %>%
   full_join(rc_by_id_agg_04_15, by = c("id","ID_CODE", "SP_CODE", "Block", "Common_Name", "date", 'month', 'year')) %>%
   left_join(Sp, by = c("Common_Name", "SP_CODE" = "PSMFC_Code")) %>%
-  full_join(oe_by_id_agg_04_15, by = c("ID_CODE" = "id_noloc", "Block", "date", 'month', 'year'), suffix = c("_catch", "_effort"))
+  full_join(oe_by_id_agg_04_15, by = c("ID_CODE" = "id_noloc", "Block", "date", 'month', 'year'), suffix = c("_catch", "_effort")) %>%
+  mutate(id = ifelse(is.na(id), ID_CODE, id))
 
 
 cpue_combos = all_by_id %>%
-  group_by(Common_Name_catch, Common_Name_effort, TripType_Description_catch, TripType_Description_effort, primary) %>%
+  group_by(Common_Name_catch, Common_Name_effort, TripType_Description_catch, TripType_Description_effort) %>%
   count() %>%
   arrange(desc(n))
 
@@ -57,19 +58,21 @@ notused= catch_noeffort %>%
 cpua= all_by_id %>%
   ungroup() %>%
   filter(!(!is.na(Common_Name_catch) & is.na(Common_Name_effort))) %>%
-  select(id, date, month, year, Block, SP_CODE, Common_Name_catch, Common_Name_effort, TripType_Description_catch, TripType_Description_effort, primary, Ob_Weighed_Fish, Ob_AvKWgt, Ob_Kept, Total_Obs_Fish_Caught, Rep_Released, Rep_Kept, Total_Rep_Fish_Caught, Days, Cntrbs, Vessels, AnglerDays)
+  select(id, date, month, year, Block, SP_CODE, Common_Name_catch, Common_Name_effort, TripType_Description_catch, TripType_Description_effort, Ob_Weighed_Fish, Ob_AvKWgt, Ob_Kept, Total_Obs_Fish_Caught, Rep_Released, Rep_Kept, Total_Rep_Fish_Caught, Days, Cntrbs, Vessels, AnglerDays)
 
 
-# DEPENDING ON DISP3 OUTCOME CERTAIN AGGREGATES SHOULD BE INCLUDED VS REMOVED (REP ALIVE etc)
+# replaces NAs with 0s for the columns that will be aggregated
+# calculates the total weight of weighed fish by multiplying the average wiehgt by the number of weighed fish. This is then later summed so average of average is not used for average weight. 
 cpua = cpua %>%
   mutate(across(Ob_Weighed_Fish:AnglerDays, ~ifelse(is.na(.x),0,.x))) %>%
   mutate(fish_total_weight = Ob_AvKWgt*Ob_Weighed_Fish) %>%
   mutate(Total_Fish_Caught = Total_Obs_Fish_Caught + Total_Rep_Fish_Caught)
 
 # more infitiy to sort out 
-cpua = cpua %>%
+cpua_year_aggregated = cpua %>%
   group_by(year, Block, Common_Name_catch, TripType_Description_effort) %>%
-  summarise(n_id = n(),
+  summarise(n_samples = n(),
+            n_samples2 = n_distinct(id),
             Ob_Kept = sum(Ob_Kept, na.rm = T),
             Rep_Released = sum(Rep_Released, na.rm = T),
             Rep_Kept = sum(Rep_Kept, na.rm = T),
@@ -84,13 +87,27 @@ cpua = cpua %>%
   mutate(Ob_AvKWgt = fish_total_weight/fish_total_weighed) %>%
   mutate(CPUA = Total_Fish_Caught/AnglerDays) %>%
   select(-fish_total_weight, -fish_total_weighed, -Ob_Kept, -Rep_Kept) %>%
-  select(year, Block, Common_Name_catch, TripType_Description_effort, n_samples = n_id, Rep_Released, Kept, Total_Fish_Caught, AnglerDays, Days, Cntrbs, Vessels, Ob_AvKWgt, CPUA)
+  select(year, Block, Common_Name_catch, TripType_Description_effort,  Rep_Released, Kept, Total_Fish_Caught, AnglerDays, Days, Cntrbs, Vessels, Ob_AvKWgt, CPUA)
 
 
 # need to look into infinite values
-cpua_year_aggregated = cpua %>%
+cpua_year_aggregated = cpua_year_aggregated %>%
   mutate(CPUA = ifelse(is.infinite(CPUA), 0, CPUA))
-dat_long = cpua_year_aggregated 
 
-write.csv(dat_long, "Outputs/PR_CPUA.csv", row.names = F, na = "")
+write.csv(cpua_year_aggregated , "Outputs/PR_CPUA.csv", row.names = F, na = "")
 
+test = cpua_year_aggregated %>% filter(Common_Name_catch == 'lingcod')
+
+samplesize= cpua_year_aggregated %>%
+  group_by(n_samples) %>% 
+  summarise(count = n(),
+            mean_cpua = mean(CPUA, na.rm = T),
+            max_cpua = max(CPUA, na.rm = T))
+
+nas = filter(cpua_year_aggregated, is.na(CPUA))
+
+library(ggplot2)
+
+ggplot(test, aes(n_samples, CPUA)) +
+  geom_point() +
+  theme_classic()
