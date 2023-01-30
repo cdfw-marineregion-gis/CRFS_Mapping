@@ -1,0 +1,489 @@
+OBJECTID,PSMFC_Code,ALPHA5,Common_Name,RecfinTT,TripType_Description,Group
+1,5102030100,ABALO,abalone genus                 ,8,Invertebrates,
+2,8747020210,ANCDB,deepbody anchovy              ,1,Coastal migratory,
+3,8747020000,ANCFM,anchovy family                ,1,Coastal migratory,
+4,8747020200,ANCGN,anchovy genus                 ,1,Coastal migratory,
+5,8747020101,ANCNO,northern anchovy              ,1,Coastal migratory,
+6,8756010206,ARGNT,Pacific argentine             ,,,
+7,8837010101,BARPA,Pacific barracuda             ,1,Coastal migratory,
+8,8835550000,BFFFM,butterflyfish family          ,3,Bottomfish,
+9,5500000000,BIVAL,bivalve class                 ,8,Invertebrates,
+10,8850030104,BLKSJ,black skipjack                ,2,Highly migratory,
+11,8835620306,BLKSM,blacksmith                    ,3,Bottomfish,
+12,8842010203,BLNBY,bay blenny                    ,5,Inshore,
+13,8842010204,BLNRP,rockpool blenny               ,3,Bottomfish,
+14,8847010301,BOGBY,bay goby                      ,5,Inshore,
+15,8847012001,BOGYL,yellowfin goby                ,,,
+16,8739010101,BONEF,bonefish                      ,5,Inshore,
+17,8850030201,BONPA,Pacific bonito                ,1,Coastal migratory,
+18,1000000001,BOTOM,bottomfish (groundfish)       ,3,Bottomfish,groundfish
+19,8860030301,BOXSP,spiny boxfish                 ,,,
+20,8851030000,BUTFM,butterfish family             ,1,Coastal migratory,
+21,8776010101,CARPC,common carp                   ,,,
+22,8756020106,CASTG,California smoothtongue       ,3,Bottomfish,
+23,8777020105,CATCN,channel catfish               ,,,
+24,8827010401,CBFLS,longspine combfish            ,,,
+25,8827010402,CBFSS,shortspine combfish           ,,,
+26,8784010101,CLNGN,nothern clingfish             ,,,
+27,8791030000,CODFM,cod family                    ,3,Bottomfish,
+28,8791030401,CODPA,Pacific cod                   ,3,Bottomfish,
+29,8791030601,CODTC,Pacific tomcod                ,3,Bottomfish,
+30,8835440115,COROM,orangemouth corvina           ,5,Inshore,
+31,8835440114,CORSF,shortfin corvina              ,5,Inshore,
+32,6188000000,CRABS,true crabs                    ,8,Invertebrates,
+33,6188030102,CRBBR,brown rock crab               ,8,Invertebrates,
+34,8835440607,CRBCA,California corbina            ,5,Inshore,
+35,6188030104,CRBDG,dungeness crab                ,8,Invertebrates,
+36,6188030100,CRBGN,cancer genus                  ,8,Invertebrates,
+37,6188030105,CRBGR,graceful rock crab            ,8,Invertebrates,
+38,6188030101,CRBRR,red rock crab                 ,8,Invertebrates,
+39,6188030109,CRBYR,yellow rock crab              ,8,Invertebrates,
+40,8835442301,CRKBK,black croaker                 ,3,Bottomfish,
+41,8835442401,CRKSF,spotfin croaker               ,5,Inshore,
+42,8835441105,CRKYF,yellowfin croaker             ,5,Inshore,
+43,8835440201,CROWT,white croaker                 ,5,Inshore,
+44,6100000000,CRUST,crustacean subphylum          ,8,Invertebrates,
+45,8705020000,CSHFM,cow shark family              ,2,Highly migratory,
+46,8792010000,CSKFM,cusk eel family               ,,,
+47,8835170105,CTFPE,popeye catalufa               ,,,
+48,8708010000,CTSFM,cat shark family              ,3,Bottomfish,
+49,8170000000,CUCUM,sea cucumbers                 ,8,Invertebrates,
+50,8850020202,CUTLP,Pacific cutlassfish           ,2,Highly migratory,
+51,8857030100,DABGN,sanddab genus                 ,3,Bottomfish,
+52,8857030111,DABLF,longfin sanddab               ,3,Bottomfish,
+53,8857030101,DABPA,Pacific sanddab               ,3,Bottomfish,
+54,8857030102,DABSP,speckled sanddab              ,3,Bottomfish,
+55,8835620000,DAMFM,damselfish family             ,3,Bottomfish,
+56,8835290101,DRADO,dolphinfish                   ,2,Highly migratory,
+57,8759040000,DRGFM,dragonfish family             ,,,
+58,8835440000,DRMFM,drum family                   ,5,Inshore,
+59,8756020000,DSSFM,deepsea smelt family          ,3,Bottomfish,
+60,8741000000,EELOR,eel order                     ,,,
+61,8793010000,ELPFM,eelpout family                ,,,
+62,8713030101,ERYPA,Pacific electric ray          ,,,
+63,8857030000,FLLFN,lefteye flounder family       ,3,Bottomfish,
+64,8842010000,FLNFM,combtooth blenny family       ,,,
+65,8857040102,FLRAR,arrowtooth flounder           ,3,Bottomfish,
+66,8857040000,FLRFM,righteye flounder family      ,3,Bottomfish,
+67,8857040101,FLRKM,Kamchatka flounder            ,3,Bottomfish,
+68,8857041401,FLRST,starry flounder               ,5,Inshore,
+69,8857000000,FLTOR,flatfish order                ,3,Bottomfish,
+70,8803010107,FLYCA,California flyingfish         ,1,Coastal migratory,
+71,8803010000,FLYFM,flyingfish family             ,1,Coastal migratory,
+72,8705010000,FRSFM,frill shark family            ,,,
+73,8860020203,FTRIG,finescale triggerfish         ,5,Inshore,
+74,8835620701,GARIB,garibaldi                     ,3,Bottomfish,
+75,8835400000,GNTFM,grunt family                  ,,,
+76,8835022901,GNTSB,giant seabass                 ,3,Bottomfish,
+77,8847010101,GOBAR,arrow goby                    ,,,
+78,8847010201,GOBBE,blackeye goby                 ,,,
+79,8847010000,GOBFM,goby family                   ,,,
+80,8827010000,GRNFM,greenling family              ,3,Bottomfish,greenling
+81,8827010100,GRNGN,greenling genus               ,3,Bottomfish,greenling
+82,8827010101,GRNKP,kelp greenling                ,3,Bottomfish,greenling
+83,8827010103,GRNMA,masked greenling              ,3,Bottomfish,greenling
+84,8827010301,GRNPT,painted greenling             ,3,Bottomfish,greenling
+85,8827010102,GRNRK,rock greenling                ,3,Bottomfish,greenling
+86,8827010104,GRNWT,whitespotted greenling        ,3,Bottomfish,greenling
+87,8835020508,GRPBT,broomtail grouper             ,3,Bottomfish,
+88,8835020507,GRPGF,gulf grouper                  ,3,Bottomfish,
+89,8805020701,GRUCA,California grunion            ,5,Inshore,
+90,8713020301,GUIBD,banded guitarfish             ,5,Inshore,
+91,8713020000,GUIFM,guitarfish family             ,5,Inshore,
+92,8713020104,GUISN,shovelnose guitarfish         ,5,Inshore,
+93,8842130205,GUNCR,crescent gunnel               ,,,
+94,8842130000,GUNFM,gunnel family                 ,,,
+95,8842130101,GUNPP,penpoint gunnel               ,,,
+96,8842130206,GUNSB,saddleback gunnel             ,,,
+97,8606010101,HAGBK,black hagfish                 ,,,
+98,8606010000,HAGFM,hagfish order                 ,,,
+99,8606010102,HAGPA,Pacific hagfish               ,,,
+100,8857030309,HALCA,California halibut            ,5,Inshore,halibut
+101,8835510401,HALFM,halfmoon                      ,3,Bottomfish,
+102,8857041801,HALGL,Greenland halibut             ,3,Bottomfish,
+103,8857041901,HALPA,Pacific halibut               ,3,Bottomfish,
+104,8747010000,HERFM,herring family                ,5,Inshore,
+105,8747010201,HERPA,Pacific herring               ,5,Inshore,
+106,8747010601,HERRD,round herring                 ,5,Inshore,
+107,,INVTM,invertebrates general         ,8,Invertebrates,
+108,8835280000,JACFM,jack family                   ,1,Coastal migratory,
+109,8835280101,JACMK,jack mackerel                 ,1,Coastal migratory,
+110,8850030103,KAWAK,kawakawa                      ,2,Highly migratory,
+111,8804040206,KLFCA,California killifish          ,,,
+112,8842090102,KLPCR,crevice kelpfish              ,3,Bottomfish,
+113,8842090000,KLPFM,clinid family                 ,,,
+114,8842095050,KLPGT,giant kelpfish                ,3,Bottomfish,
+115,8842091403,KLPOF,onespot fringehead            ,,,
+116,8842090505,KLPRB,reef blenny                   ,3,Bottomfish,
+117,8842091401,KLPSF,sarcastic fringehead          ,,,
+118,8842090103,KLPSP,spotted kelpfish              ,3,Bottomfish,
+119,8842090101,KLPST,striped kelpfish              ,3,Bottomfish,
+120,8815020101,KOSAL,king-of-the-salmon            ,,,
+121,8762090102,LANLN,longnose lancetfish           ,,,
+122,8847014701,LJMUD,longjaw mudsucker             ,,,
+123,8603010203,LMPAR,Arctic lamprey                ,,,
+124,8603010000,LMPFM,lamprey family                ,4,Other anadromous,
+125,8603010101,LMPPA,Pacific lamprey               ,,,
+126,8827010201,LNGCD,lingcod                       ,3,Bottomfish,lingcod
+127,6182010103,LOBSP,spiny lobster                 ,8,Invertebrates,
+128,8850050101,LUVAR,louvar                        ,,,
+129,8762020103,LZDCA,California lizardfish         ,3,Bottomfish,
+130,8762020000,LZDFM,lizardfish family             ,3,Bottomfish,
+131,8850030701,MACBL,bullet mackerel               ,1,Coastal migratory,
+132,8850030000,MACFM,mackerel family               ,1,Coastal migratory,
+133,8850030702,MACFR,frigate mackerel              ,,,
+134,8850030301,MACPA,chub (Pacific) mackerel       ,1,Coastal migratory,
+135,8713080102,MANTA,manta                         ,,,
+136,8850060202,MARBK,black marlin                  ,2,Highly migratory,
+137,8850060201,MARBL,blue marlin                   ,2,Highly migratory,
+138,8850060000,MARFM,billfish family               ,2,Highly migratory,
+139,8850060306,MARST,striped marlin                ,2,Highly migratory,
+140,8783010100,MIDGN,midshipman genus              ,3,Bottomfish,
+141,8783010101,MIDPF,plainfin midshipman           ,3,Bottomfish,
+142,8783010107,MIDSP,specklefin midshipman         ,5,Inshore,
+143,8835390000,MOJFM,mojarra family                ,,,
+144,5085000000,MOLLU,mollusk phylum                ,8,Invertebrates,
+145,8741050409,MORAY,California moray              ,,,
+146,8835281204,MSCAD,Mexican scad                  ,,,
+147,8803020204,NEDCA,California needlefish         ,,,
+148,,NFABA,abalone                       ,,Non-fishing,
+149,,NFBAS,burial at sea                 ,,Non-fishing,
+150,,NFBIR,bird watching                 ,,Non-fishing,
+151,,NFCOM,commercial / CPFV trip        ,,NFcomm,
+152,,NFCRB,crab                          ,,Non-fishing,
+153,,NFCRU,cruise                        ,,Non-fishing,
+154,,NFDIV,diving                        ,,Non-fishing,
+155,,NFENF,enforcement                   ,,Non-fishing,
+156,,NFHNT,gun hunting                   ,,Non-fishing,
+157,6181010000,NFLOB,lobster                       ,,Non-fishing,
+158,,NFMAT,maintenance                   ,,Non-fishing,
+159,,NFOTH,other non fishing             ,,NFother,
+160,,NFPC6,non fishing PC6               ,,NFpc6,
+161,,NFPUL,pull boat from water          ,,Non-fishing,
+162,,NFREF,no wet gear                   ,,Non-fishing,
+163,,NFRES,research                      ,,Non-fishing,
+164,,NFSHL,shellfish; unspecified        ,,Non-fishing,
+165,,NFUNI,unknown non fishing           ,,Non-fishing,
+166,,NFWHA,whale-watching                ,,Non-fishing,
+167,,NOXXX,No Catch                      ,6,No catch,
+168,5708000000,OCTOP,octopus order                 ,8,Invertebrates,
+169,8835220101,OCWHT,ocean whitefish               ,3,Bottomfish,oceanwhitefish
+170,8813010101,OPAHS,opah                          ,,,
+171,8835510201,OPALE,opaleye                       ,3,Bottomfish,
+172,8835200000,PERFM,perch family                  ,,,
+173,8835510301,PERZB,zebra perch                   ,3,Bottomfish,perch_B
+174,8791040102,PHAKE,Pacific hake                  ,3,Bottomfish,
+175,8835281501,PILTF,pilotfish                     ,,,
+176,8820020101,PIPEB,bay pipefish                  ,,,
+177,8791030701,POLWE,walleye pollock               ,,,
+178,8835290102,POMDO,pompano dolphin               ,2,Highly migratory,
+179,8835710000,POMFM,pomfret family                ,,,
+180,8851030101,POMPA,Pacific pompano (butterfish)  ,1,Coastal migratory,
+181,8842121401,PRKBK,black prickleback             ,,,
+182,8842120000,PRKFM,prickleback family            ,3,Bottomfish,
+183,8842122201,PRKMK,monkeyface prickleback        ,3,Bottomfish,
+184,8842121402,PRKRK,rock prickleback              ,,,
+185,8842120902,PRKSN,snake prickleback             ,,,
+186,8861010000,PUFFM,puffer family                 ,,,
+187,8835442501,QUEEN,queenfish                     ,5,Inshore,
+188,8843010101,RAGFS,ragfish                       ,,,
+189,8713000000,RAJOR,skate and ray order           ,3,Bottomfish,
+190,8716020101,RATFS,spotted ratfish               ,3,Bottomfish,
+191,8835270000,REMFM,remora family                 ,,,
+192,8835270101,REMWS,whalesucker                   ,,,
+193,8826010104,RFAUR,aurora rockfish               ,3,Bottomfish,rockfish
+194,8826010140,RFBAY,black and yellow rockfish     ,3,Bottomfish,rockfish
+195,8826010122,RFBKG,blackgill rockfish            ,3,Bottomfish,rockfish
+196,8826010121,RFBLK,black rockfish                ,3,Bottomfish,rockfish
+197,8826010124,RFBLU,blue rockfish                 ,3,Bottomfish,rockfish
+198,8826010156,RFBNK,bank rockfish                 ,3,Bottomfish,rockfish
+199,8826010127,RFBOC,bocaccio                      ,3,Bottomfish,rockfish
+200,8826010103,RFBRN,brown rockfish                ,3,Bottomfish,rockfish
+201,8826010147,RFBSP,bronzespotted rockfish        ,3,Bottomfish,rockfish
+202,8826010128,RFCAN,canary rockfish               ,3,Bottomfish,rockfish
+203,8826010125,RFCHN,China rockfish                ,3,Bottomfish,rockfish
+204,8826010145,RFCLO,calico rockfish               ,3,Bottomfish,rockfish
+205,8826010153,RFCMA,chameleon rockfish            ,3,Bottomfish,rockfish
+206,8826010108,RFCOP,copper rockfish               ,3,Bottomfish,rockfish
+207,8826010149,RFCOW,cowcod                        ,3,Bottomfish,rockfish
+208,8826010110,RFDBL,darkblotched rockfish         ,3,Bottomfish,rockfish
+209,8826010109,RFDUS,dusky rockfish                ,3,Bottomfish,rockfish
+210,8826010155,RFFLG,flag rockfish                 ,3,Bottomfish,rockfish
+211,8826010164,RFFRK,freckled rockfish             ,3,Bottomfish,rockfish
+212,8826010166,RFGBL,greenblotched rockfish        ,3,Bottomfish,rockfish
+213,8826010100,RFGEN,rockfish genus                ,3,Bottomfish,rockfish
+214,8826010162,RFGOP,gopher rockfish               ,3,Bottomfish,rockfish
+215,8826010143,RFGRN,greenspotted rockfish         ,3,Bottomfish,rockfish
+216,8826010154,RFGRS,grass rockfish                ,3,Bottomfish,rockfish
+217,8826010112,RFGST,greenstriped rockfish         ,3,Bottomfish,rockfish
+218,8826010157,RFHBD,halfbanded rockfish           ,3,Bottomfish,rockfish
+219,8826010160,RFHNC,honeycomb rockfish            ,3,Bottomfish,rockfish
+220,8826010142,RFKLP,kelp rockfish                 ,3,Bottomfish,rockfish
+221,8826010202,RFLST,longspine thornyhead          ,3,Bottomfish,rockfish
+222,8826010150,RFMEX,Mexican rockfish              ,3,Bottomfish,rockfish
+223,8826010158,RFOLV,olive rockfish                ,3,Bottomfish,rockfish
+224,8826010117,RFPEP,chilipepper                   ,3,Bottomfish,rockfish
+225,8826010146,RFPNK,pink rockfish                 ,3,Bottomfish,rockfish
+226,8826010102,RFPOP,Pacific ocean perch           ,3,Bottomfish,rockfish
+227,8826010165,RFPRS,pinkrose rockfish             ,3,Bottomfish,rockfish
+228,8826010113,RFPSD,Puget Sound rockfish          ,3,Bottomfish,rockfish
+229,8826010137,RFPYG,pygmy rockfish                ,3,Bottomfish,rockfish
+230,8826010120,RFQIL,quillback rockfish            ,3,Bottomfish,rockfish
+231,8826010105,RFRBD,redbanded rockfish            ,3,Bottomfish,rockfish
+232,8826010101,RFRGH,rougheye rockfish             ,3,Bottomfish,rockfish
+233,8826010132,RFROS,rosy rockfish                 ,3,Bottomfish,rockfish
+234,8826010130,RFRST,redstripe rockfish            ,3,Bottomfish,rockfish
+235,8826010118,RFRTN,rosethorn rockfish            ,3,Bottomfish,rockfish
+236,8826010138,RFSCN,sharpchin rockfish            ,3,Bottomfish,rockfish
+237,8826010163,RFSDS,swordspine rockfish           ,3,Bottomfish,rockfish
+238,8826010119,RFSHB,shortbelly rockfish           ,3,Bottomfish,rockfish
+239,8826010106,RFSLG,silvergray rockfish           ,3,Bottomfish,rockfish
+240,8826010111,RFSNS,splitnose rockfish            ,3,Bottomfish,rockfish
+241,8826010152,RFSPK,speckled rockfish             ,3,Bottomfish,rockfish
+242,8826010148,RFSQS,squarespot rockfish           ,3,Bottomfish,rockfish
+243,8826010107,RFSRK,shortraker rockfish           ,3,Bottomfish,rockfish
+244,8826010201,RFSST,shortspine thornyhead         ,3,Bottomfish,rockfish
+245,8826010144,RFSTA,starry rockfish               ,3,Bottomfish,rockfish
+246,8826010135,RFSTR,stripetail rockfish           ,3,Bottomfish,rockfish
+247,8826010126,RFTIG,tiger rockfish                ,3,Bottomfish,rockfish
+248,8826010159,RFTRE,treefish                      ,3,Bottomfish,rockfish
+249,8826010123,RFVER,vermilion rockfish            ,3,Bottomfish,rockfish
+250,8826010114,RFWID,widow rockfish                ,3,Bottomfish,rockfish
+251,8826010161,RFWTB,whitebelly rockfish           ,3,Bottomfish,rockfish
+252,8826010134,RFYEY,yelloweye rockfish            ,3,Bottomfish,rockfish
+253,8826010131,RFYMN,yellowmouth rockfish          ,3,Bottomfish,rockfish
+254,8826010115,RFYTL,yellowtail rockfish           ,3,Bottomfish,rockfish
+255,8840030000,RNQFM,ronquil family                ,3,Bottomfish,
+256,8840030201,RNQNO,northern ronquil              ,3,Bottomfish,
+257,8831080601,ROCKH,rockhead                      ,,,
+258,8713070202,RYBAT,bat ray                       ,5,Inshore,
+259,8713050203,RYFLY,California butterflyray       ,,,
+260,8827020000,SABFM,sablefish family              ,3,Bottomfish,
+261,8827020101,SABLE,sablefish                     ,3,Bottomfish,
+262,8850060101,SAILF,sailfish                      ,2,Highly migratory,
+263,8755010402,SALAC,Arctic char                   ,,,
+264,8755010305,SALAT,Atlantic salmon               ,,,
+265,8755010206,SALCK,chinook salmon                ,6,Salmon,
+266,8755010202,SALCM,chum salmon                   ,6,Salmon,
+267,8755010203,SALCO,coho salmon                   ,6,Salmon,
+268,8755010301,SALCT,cutthroat trout               ,6,Salmon,
+269,8755010401,SALDV,Dolly Varden                  ,6,Salmon,
+270,8835401001,SALEM,salema                        ,3,Bottomfish,
+271,8755010000,SALFM,salmon family                 ,6,Salmon,
+272,8755010200,SALGN,salmon genus                  ,6,Salmon,
+273,8755010201,SALPK,pink salmon                   ,6,Salmon,
+274,8755010302,SALRB,rainbow trout                 ,6,Salmon,
+275,8755010205,SALSE,sockeye salmon                ,6,Salmon,
+276,8755010300,SALTR,sea run trouts                ,6,Salmon,
+277,8835400307,SARGO,sargo                         ,3,Bottomfish,
+278,8747010301,SARPA,Pacific sardine               ,1,Coastal migratory,
+279,8803030101,SAUPA,Pacific saury                 ,1,Coastal migratory,
+280,8835021604,SBBAR,barred sandbass               ,3,Bottomfish,sandbass_B
+281,8835020000,SBFAM,sea bass family               ,3,Bottomfish,
+282,8835021600,SBGEN,sandbass genus                ,3,Bottomfish,sandbass_B
+283,8835021602,SBKLP,kelp bass                     ,3,Bottomfish,kelpbass
+284,8835021603,SBSPT,spotted sandbass              ,5,Inshore,sandbass_I
+285,8835022002,SBTHF,threadfin bass                ,3,Bottomfish,
+286,8835440101,SBWHT,white seabass                 ,3,Bottomfish,whiteseabass
+287,8831021002,SCANT,antlered sculpin              ,,,
+288,8831021304,SCASH,Arctic staghorn sculpin       ,,,
+289,8835510000,SCBFM,sea chub family               ,3,Bottomfish,
+290,8831021405,SCBIL,brown Irish lord              ,,,
+291,8831021901,SCBKF,blackfin sculpin              ,,,
+292,8831020705,SCBLD,bald sculpin                  ,,,
+293,8850020601,SCBRZ,razorback scabbardfish        ,,,
+294,8831021001,SCBUF,buffalo sculpin               ,3,Bottomfish,
+295,8831021004,SCBUL,bull sculpin                  ,3,Bottomfish,
+296,8831023101,SCCAB,cabezon                       ,3,Bottomfish,cabezon
+297,8831020801,SCCRG,coastrange sculpin            ,,,
+298,8831021602,SCDSK,dusky sculpin                 ,,,
+299,8831020000,SCFAM,sculpin family                ,3,Bottomfish,
+300,8831022204,SCGRT,great sculpin                 ,3,Bottomfish,
+301,8831023001,SCGRU,grunt sculpin                 ,3,Bottomfish,
+302,8831021400,SCILG,Irish lord genus              ,3,Bottomfish,
+303,8831021003,SCLST,leister sculpin               ,3,Bottomfish,
+304,8831021601,SCNTH,northern sculpin              ,3,Bottomfish,
+305,8831020401,SCPAD,padded sculpin                ,3,Bottomfish,
+306,8831020803,SCPRK,prickly sculpin               ,5,Inshore,
+307,8831021801,SCPSH,Pacific staghorn sculpin      ,3,Bottomfish,
+308,8826010616,SCRCA,California scorpionfish       ,3,Bottomfish,scorpionfish
+309,8826010000,SCRFM,scorpionfish family           ,3,Bottomfish,scorpionfish
+310,8831021402,SCRIL,red Irish lord                ,3,Bottomfish,
+311,8826011203,SCRRB,rainbow scorpionfish          ,3,Bottomfish,scorpionfish
+312,8831020501,SCRSL,rosylip sculpin               ,,,
+313,8831020101,SCSCL,scaled sculpin                ,,,
+314,8831023801,SCSCT,scissortail sculpin           ,,,
+315,8831022301,SCSFN,sailfin sculpin               ,,,
+316,8831020701,SCSHN,sharpnose sculpin             ,,,
+317,8831020402,SCSLH,scalyhead sculpin             ,,,
+318,8831021604,SCSPT,spotfin sculpin               ,3,Bottomfish,
+319,8831022401,SCTDP,tidepool sculpin              ,,,
+320,8831021603,SCTRF,threadfin sculpin             ,3,Bottomfish,
+321,8831020704,SCWOL,wolly sculpin                 ,,,
+322,8741130000,SELFM,snake eel family              ,,,
+323,8741131007,SELYL,yellow snake eel              ,,,
+324,8839011101,SENOR,senorita                      ,3,Bottomfish,
+325,8826020122,SERLT,lumptail searobin             ,,,
+326,8713050101,SGDIA,diamond stingray              ,5,Inshore,
+327,8713050000,SGFAM,stingray family               ,5,Inshore,
+328,8713050100,SGGEN,stingray genus                ,5,Inshore,
+329,8713050102,SGPEL,pelagic stingray              ,2,Highly migratory,
+330,8713050302,SGRND,round stingray                ,5,Inshore,
+331,8747010101,SHADA,American shad                 ,4,Other anadromous,
+332,8711010101,SHANG,Pacific angel shark           ,5,Inshore,
+333,8708010101,SHBCS,brown cat shark               ,2,Highly migratory,
+334,8708020601,SHBLU,blue shark                    ,2,Highly migratory,
+335,8708030101,SHBNH,bonnethead shark              ,2,Highly migratory,
+336,8708020405,SHBSM,brown smoothhound             ,5,Inshore,
+337,8708020502,SHBUL,bull shark                    ,2,Highly migratory,
+338,8710010000,SHDFM,dogfish shark family          ,3,Bottomfish,
+339,8708020501,SHDKY,dusky shark                   ,2,Highly migratory,
+340,8839011201,SHEEP,California sheephead          ,3,Bottomfish,sheephead
+341,8708020101,SHFIN,soupfin shark                 ,3,Bottomfish,
+342,8708020404,SHGSM,gray smoothhound              ,5,Inshore,
+343,8704010101,SHHRN,horn shark                    ,5,Inshore,
+344,1000000005,SHINS,unidentified inshore sharks   ,5,Inshore,
+345,8708020902,SHLEP,leopard shark                 ,5,Inshore,
+346,8707040000,SHMFM,mackerel shark family         ,2,Highly migratory,
+347,8708020513,SHNTH,narrowtooth shark             ,2,Highly migratory,
+348,1000000006,SHOFF,unidentified offshore sharks  ,2,Highly Migratory,
+349,8708020000,SHRFM,requiem shark family          ,2,Highly migratory,
+350,,SHRMP,shrimp                        ,8,Invertebrates,
+351,8707040301,SHSAL,salmon shark                  ,2,Highly migratory,
+352,8710010201,SHSDG,spiny dogfish shark           ,3,Bottomfish,
+353,8705020201,SHSEV,seven gill shark              ,5,Inshore,
+354,8708020400,SHSGN,smoothhound genus             ,5,Inshore,
+355,8705020101,SHSIX,bluntnose sixgill shark       ,5,Inshore,
+356,8710010101,SHSLP,Pacific sleeper shark         ,3,Bottomfish,
+357,8707040501,SHSMK,shortfin mako shark           ,2,Highly migratory,
+358,8708020406,SHSSM,sicklefin smoothhound         ,5,Inshore,
+359,8708010501,SHSWL,swell shark                   ,5,Inshore,
+360,8707040401,SHTHR,thresher shark                ,2,Highly migratory,
+361,8708020201,SHTIG,tiger shark                   ,2,Highly migratory,
+362,1000000002,SHUNI,unidentified (sharks)         ,2,Highly migratory,
+363,8707040101,SHWHT,white shark                   ,2,Highly migratory,
+364,8713040102,SKALT,Aleutian skate                ,3,Bottomfish,
+365,8818010000,SKBFM,stickleback family            ,,,
+366,8713040103,SKBIG,big skate                     ,3,Bottomfish,
+367,8818010101,SKBTS,threespine stickleback        ,,,
+368,8713040000,SKFAM,skate family                  ,3,Bottomfish,
+369,8850030100,SKJGN,skipjack genus                ,2,Highly migratory,
+370,8713040108,SKLGN,longnose skate                ,3,Bottomfish,
+371,8713040111,SKSTY,starry skate                  ,3,Bottomfish,
+372,8713040104,SKTCA,California skate              ,5,Inshore,
+373,8755030201,SMCAP,capelin                       ,,,
+374,8755030501,SMEUL,eulachon                      ,,,
+375,8755030000,SMFAM,smelt family                  ,5,Inshore,
+376,8805020601,SMJAK,jacksmelt                     ,5,Inshore,
+377,8755030402,SMLGF,longfin smelt                 ,5,Inshore,
+378,8755030401,SMNGT,night smelt                   ,5,Inshore,
+379,8755030101,SMSUR,surf smelt                    ,5,Inshore,
+380,8805020101,SMTOP,topsmelt                      ,5,Inshore,
+381,8755030601,SMWTB,whitebait smelt               ,5,Inshore,
+382,8840010000,SNDFM,sandfish family               ,3,Bottomfish,
+383,8840010201,SNDPA,Pacific sandfish              ,3,Bottomfish,
+384,8835160000,SNFFM,sunfish family                ,,,
+385,8857041001,SOLAF,Arctic flounder               ,3,Bottomfish,
+386,8857040602,SOLBF,Bering flounder               ,3,Bottomfish,
+387,8857031102,SOLBG,bigmouth sole                 ,3,Bottomfish,
+388,8857040701,SOLBT,butter sole                   ,3,Bottomfish,
+389,8857041602,SOLCF,curlfin sole                  ,3,Bottomfish,
+390,8857041601,SOLCO,C-O sole                      ,3,Bottomfish,
+391,8857040301,SOLDS,deepsea sole                  ,3,Bottomfish,
+392,8857042201,SOLDT,diamond turbot                ,5,Inshore,
+393,8857041201,SOLDV,Dover sole                    ,3,Bottomfish,
+394,8857041301,SOLEG,English sole                  ,3,Bottomfish,
+395,8857040601,SOLFH,flathead sole                 ,3,Bottomfish,
+396,8857031501,SOLFT,fantail sole                  ,5,Inshore,
+397,8857041604,SOLHT,hornyhead turbot              ,3,Bottomfish,
+398,8845010101,SOLPA,Pacific sand lance            ,,,
+399,8857041501,SOLPL,Alaska plaice                 ,,,
+400,8857040401,SOLPT,petrale sole                  ,3,Bottomfish,
+401,8857040801,SOLRK,rock sole                     ,3,Bottomfish,
+402,8857040501,SOLRX,rex sole                      ,3,Bottomfish,
+403,8857041701,SOLSD,sand sole                     ,5,Inshore,
+404,8857041101,SOLSL,slender sole                  ,3,Bottomfish,
+405,8857041603,SOLST,spotted turbot                ,5,Inshore,
+406,8857040901,SOLYF,yellowfin sole                ,3,Bottomfish,
+407,8835600702,SPBAR,barred surfperch              ,5,Inshore,
+408,8835600302,SPBLK,black perch                   ,3,Bottomfish,
+409,8835600703,SPCAL,calico surfperch              ,5,Inshore,
+410,8835520102,SPDPA,Pacific spadefish             ,,,
+411,8835601002,SPDWF,dwarf perch                   ,5,Inshore,
+412,8835600000,SPFAM,surfperch family              ,5,Inshore,perch_I
+413,8835600101,SPKLP,kelp perch                    ,3,Bottomfish,perch_B
+414,8835600601,SPPIL,pile perch                    ,5,Inshore,perch_I
+415,8835601101,SPPNK,pink seaperch                 ,3,Bottomfish,perch_B
+416,8835600801,SPRBW,rainbow seaperch              ,3,Bottomfish,perch_B
+417,8835601001,SPREF,reef perch                    ,3,Bottomfish,perch_B
+418,8835600701,SPRTL,redtail surfperch             ,5,Inshore,perch_I
+419,8835600602,SPRUB,rubberlip seaperch            ,5,Inshore,perch_I
+420,8835600502,SPSHN,sharpnose seaperch            ,3,Bottomfish,perch_B
+421,8835600201,SPSHR,shiner perch                  ,5,Inshore,perch_I
+422,8835600402,SPSIL,silver surfperch              ,5,Inshore,perch_I
+423,8835600403,SPSPF,spotfin surfperch             ,5,Inshore,perch_I
+424,8835600301,SPSTR,striped seaperch              ,3,Bottomfish,perch_B
+425,8835600401,SPWAL,walleye surfperch             ,5,Inshore,perch_I
+426,8835600501,SPWHT,white seaperch                ,5,Inshore,perch_I
+427,5707150501,SQDJU,"squid, jumbo                  ",8,Invertebrates,
+428,5706010300,SQDMK,"squid, market                 ",8,Invertebrates,
+429,8851040101,SQTSE,smalleye squaretail           ,,,
+430,5700000000,SQUID,squid class                   ,8,Invertebrates,
+431,8850030504,SRAGU,gulf sierra                   ,1,Coastal migratory,
+432,8850030506,SRAPA,Pacific sierra                ,1,Coastal migratory,
+433,8850040101,SRDFS,swordfish                     ,2,Highly migratory,
+434,8835020102,STBAS,striped bass                  ,4,Other anadromous,
+435,8729010100,STGEN,sturgeon genus                ,4,Other anadromous,
+436,8729010102,STGRN,green sturgeon                ,4,Other anadromous,
+437,8836010101,STMUL,striped mullet                ,5,Inshore,
+438,8729010103,STWHT,white sturgeon                ,4,Other anadromous,
+439,8861040000,SUNFM,mola family                   ,2,Highly migratory,
+440,8861040101,SUNOC,ocean sunfish                 ,2,Highly migratory,
+441,8805020000,SVRFM,silverside family             ,5,Inshore,
+442,8818020101,TBESN,tube snout                    ,,,
+443,8713020201,THRBK,thornback                     ,5,Inshore,
+444,8850030401,TNAAB,albacore                      ,2,Highly migratory,
+445,8850030405,TNABE,bigeye tuna                   ,2,Highly migratory,
+446,8850030402,TNABF,bluefin tuna                  ,2,Highly migratory,
+447,1000000004,TNASG,tunas (non-mackerel)          ,2,Highly migratory,
+448,8850030101,TNASJ,skipjack tuna                 ,2,Highly migratory,
+449,8850031001,TNASL,slender tuna                  ,2,Highly migratory,
+450,8850030403,TNAYF,yellowfin tuna                ,2,Highly migratory,
+451,8858020116,TNGCA,California touguefish         ,5,Inshore,
+452,1000000000,UNIFH,unidentified fish             ,7,Anything,
+453,1000000003,UNISF,unidentified (surface fish)   ,1,Coastal migratory,
+454,8142000000,URCHN,sea urchin family             ,8,Invertebrates,
+455,8850030601,WAHOO,wahoo                         ,2,Highly migratory,
+456,8835440110,WEKFS,weakfishes                    ,5,Inshore,
+457,8842020201,WOLFE,wolf-eel                      ,3,Bottomfish,
+458,8839010502,WRABS,blackspot wrasse              ,3,Bottomfish,
+459,8839010000,WRAFM,wrasse family                 ,3,Bottomfish,
+460,8839010710,WRARK,rock wrasse                   ,3,Bottomfish,
+461,8835280808,YELTL,yellowtail                    ,1,Coastal migratory,yellowtail
+462,5500000000,CLAMS,clams                         ,8,Invertebrates,
+463,5515220102,CLMBK,basket cockle                 ,8,Invertebrates,
+464,5517060403,CLMGD,geoduck clam                  ,8,Invertebrates,
+465,5515250202,CLMGP,gaper clam                    ,8,Invertebrates,
+466,5515470701,CLMLN,littleneck clam               ,8,Invertebrates,
+467,5515290101,CLMNR,razor clam                    ,8,Invertebrates,
+468,5515472002,CLMPO,Pismo clam                    ,8,Invertebrates,
+469,5515470202,CLMWA,Washington clam               ,8,Invertebrates,
+470,6183100401,CRBPR,pelagic red crab              ,8,Invertebrates,
+471,6187011502,CRBSH,sheep crab                    ,8,Invertebrates,
+472,5100000000,GAPOD,"sea slug, sea snail           ",8,Invertebrates,
+473,8842090901,KLPIS,island kelpfish               ,3,Bottomfish,
+474,8850060305,MARSP,shortbill spearfish           ,2,Highly migratory,
+475,8815030101,OARFH,oarfish                       ,2,Highly migratory,
+476,8820020111,PIPEK,kelp pipefish                 ,5,Inshore,
+477,8835710101,POMPC,pacific pomfret               ,2,Highly migratory,
+478,8861010203,PUFBU,bullseye                      ,5,Inshore,
+479,8840030302,RNQBB,bluebanded ronquil            ,3,Bottomfish,
+480,8835510602,SCBBS,bluestriped chub              ,5,Inshore,
+481,8831020405,SCBNH,bonehead sculpin              ,3,Bottomfish,
+482,5509051801,SCPRO,giant rock scallop            ,8,Invertebrates,
+483,5509050000,SCPUS,scallops                      ,8,Invertebrates,
+484,8708030000,SHHAM,hammerhead shark family       ,2,Highly migratory,
+485,8831090000,SNFAM,snailfish family              ,3,Bottomfish,
+486,8101000000,SSTAR,sea star                      ,8,Invertebrates,
+487,8835380102,TRTPA,pacific tripletail            ,5,Inshore,
+488,8839010707,WRARB,rainbow wrasse                ,3,Bottomfish,
