@@ -87,10 +87,12 @@ dat <- dat %>%
   mutate(FishPerBlock = fish/total_blocks)
 
 fishinspected = dat %>% 
-  select(id, FSHINSP) %>%
+  select(id, FSHINSP,Common_Name) %>%
   unique() %>%
-  group_by(id) %>%
-  count()
+  group_by(id, Common_Name) %>%
+  count() %>%
+  filter(n > 1) %>%
+  left_join(dat)
 
 # Create tally for groups of identical records for id_n, SP_CODE and FSHINSP. Data has a unique row for each weight data entered. Need to account for this in total fish count. THIS IS OLD LOGIC NEED TO CONFIRM or MAYBE SIMPLIFY WHY FSHINSP IS INCLUDED
 df  <- dat %>% mutate(unique_id = paste(id, SP_CODE, FSHINSP, sep="_"))
