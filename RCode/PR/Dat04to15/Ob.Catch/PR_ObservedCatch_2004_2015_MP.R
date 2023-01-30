@@ -12,8 +12,6 @@ library(stringi)
 library(tidyverse)
 library(lubridate)
 library(here)
-library(sf)
-library(leaflet)
 options(scipen = 999)
 
 # this line is required when sourcing multiple R scripts. PR_Output.R runs this and the other cleaning scripts to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. 
@@ -23,7 +21,7 @@ rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "rc_by_i
 source(here('RCode', "PR", "Locations", 'PR_Location.R'))
 
 #  read in i3 table: sampler observed catch data. the here function provides the relative path to where the data is saved. 
-oc <- fread(file = here("RCode", "PR", "Dat04to15", "Data", "PR_i3_2004-2015_759607r.csv"), fill = TRUE, na.string = c("",".")) 
+oc <- fread(file = here("RCode", "PR", "Dat04to15", "Data", "PR_i3_2004-2015_759607r.csv"), fill = TRUE, na.string = c("","."))
 
 # remove any data that does not have a valid SP_CODE, these "notused" variables are later summarized in a separate output
 notused = oc %>%

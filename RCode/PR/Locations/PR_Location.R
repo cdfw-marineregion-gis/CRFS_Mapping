@@ -1,6 +1,6 @@
 # Script to clean up and compile the i8 (location data)
 # Sourced in the observed catch, reported catch, and observed effort scripts to add in cleaned up block data for each ID
-# Michael Patton
+# Michael Patton (michael.patton@wildlife.ca.gov)
 
 #USER INPUT:
 # copy path to where you downloaded the shared CRFS_Mapping folder between the ()
@@ -27,12 +27,12 @@ format_box = function(block_column, microblock_column) {
   combined_noblanks = ifelse(nchar(combined_noNA) < 5, "", combined_noNA)
   return(combined_noblanks)
 }
+
 # Read in location data, or the i8 data table for northern california
 NLocList <- fread(file = here("RCode", "PR", "Dat04to15", "Data", "i8_1999-2016_NorCal_235374r.csv"), fill = TRUE, na.string = c("",".", "NA")) 
 
 # create new id based on id code and location number, format boxes into XX-XXX format, apply to each block column
 NLocList <- NLocList %>% 
-  mutate(locn = ifelse(is.na(locn) & !is.na(locnum), locnum, locn)) %>%
   mutate(locn = ifelse(is.na(locn)| locn == 0, 1, locn),
          block1 = ifelse(block1 == 9999999, NA, block1),
          id_loc = as.character(paste(ID_CODE, locn, sep="")),
@@ -48,7 +48,6 @@ NLocList <- NLocList %>%
 SLocList <- fread(file = here("RCode", "PR", "Dat04to15", "Data", "i8_1999-2016_SoCal_204029r.csv"), fill = TRUE, na.string = c("",".", "NA")) 
 
 SLocList <- SLocList %>% 
-  mutate(locn = ifelse(is.na(locn) & !is.na(locnum), locnum, locn)) %>%
   mutate(locn = ifelse(is.na(locn)| locn == 0, 1, locn),
          block1 = ifelse(block1 == 9999999, NA, block1),
          id_loc = as.character(paste(ID_CODE, locn, sep="")),
@@ -66,14 +65,14 @@ loc = rbind(NLocList, SLocList)
 
 # remove any data that is not PR (MODE_FX = 7)
 notused = loc %>% 
-  filter(MODE_FX != 7) %>%
+  filter(MODE_FX != 7 | is.na(MODE_FX)) %>%
   mutate(Reason = "Location not MODE_FX == 7 (PR data)")
 unique(notused$MODE_FX)
 
 loc <- loc %>% 
   filter(MODE_FX ==7)
 
-
+# clean up the dataframe by changing any blank cells to NA
 loc[loc==""]<-NA
 
 before = nrow(loc)
@@ -90,62 +89,35 @@ after = nrow(loc)
 
 before - removed == after
 
-# count the number of times a unique id code appears in the location data
-freq_summary <- loc %>% group_by(id_loc) %>% count()
-
-#Calculate percentage of occurrence where frequency of singular id code > 1 and calculate the maximum number of duplicate ID codes
-per = (nrow(filter(freq_summary, n > 1))/nrow(freq_summary))*100
-message(paste(round(per,2), "% of ids have duplicates with a maximum of ", max(freq_summary$n), "duplicates."))
 
 
-qa_duplicates = loc %>%
-  left_join(freq_summary, by = "id_loc") %>%
-  filter(n> 1) %>%
-  arrange(id_loc)
-
-
-# join back in this count data
-loc <- loc %>%
-  left_join(freq_summary, by = "id_loc") %>%
-  arrange(id_loc) %>%
-  rename(freq = n)
-
-# remove data that has duplicate ID codes
-notused3 = filter(loc, freq > 1) %>%
-  mutate(Reason = "Duplicate ids are used in the location (i8) data table")
-
-#filter to just ids used once
-loc = filter(loc, freq == 1)
 
 # remove any blocks that have an hgsize inputted, this field is where the survey gives the "range" of blocks visited?
 hgsize_summary = loc %>% group_by(HGSIZE) %>% count()
 
-BlkFilterHGSIZERemoved <- loc  %>%
-  mutate(Bk1Bx1a = ifelse(is.na(HGSIZE),Bk1Bx1a, NA),
-         Bk1Bx1b = ifelse(is.na(HGSIZE),Bk1Bx1b, NA),
-         Bk1Bx1c = ifelse(is.na(HGSIZE),Bk1Bx1c, NA),
-         Bk2Bx2a = ifelse(is.na(hgsize2),Bk2Bx2a, NA),
-         Bk2Bx2b = ifelse(is.na(hgsize2),Bk2Bx2b, NA),
-         Bk2Bx2c = ifelse(is.na(hgsize2),Bk2Bx2c, NA))
-
-# clean up the dataframe by changing any blank cells to NA
-BlkFilterHGSIZERemoved[BlkFilterHGSIZERemoved==""]<-NA
-
-#pull out the data that has blocks report
-BlkFilter <- BlkFilterHGSIZERemoved  %>% 
-  filter(!is.na(Bk1Bx1a) | !is.na(Bk1Bx1b) | !is.na(Bk1Bx1c) | !is.na(Bk2Bx2a) | !is.na(Bk2Bx2b)  | !is.na(Bk2Bx2c)) 
-
-notused4 = BlkFilterHGSIZERemoved  %>% 
-  filter(is.na(Bk1Bx1a) & is.na(Bk1Bx1b) & is.na(Bk1Bx1c) & is.na(Bk2Bx2a) & is.na(Bk2Bx2b)  & is.na(Bk2Bx2c)) %>%
+notused4 = filter(loc, !is.na(HGSIZE) | !is.na(hgsize2)) %>%
   mutate(Reason = "HGSize or HGSize2 reported ")
 
+
+loc = loc %>%
+  filter(is.na(HGSIZE) & is.na(hgsize2))
+
+nrow(loc) + nrow(notused4) == after
+
+
+#pull out the data that has blocks report
+BlkFilter <- loc  %>% 
+  filter(!is.na(Bk1Bx1a) | !is.na(Bk1Bx1b) | !is.na(Bk1Bx1c) | !is.na(Bk2Bx2a) | !is.na(Bk2Bx2b)  | !is.na(Bk2Bx2c)) 
+
 #pull out the data has has lat longs reported INSTEAD of blocks
-LatFilter  <- BlkFilterHGSIZERemoved %>%  filter(is.na(Bk1Bx1a) & is.na(Bk1Bx1b) & is.na(Bk1Bx1c) & is.na(Bk2Bx2a)  & is.na(Bk2Bx2b) & is.na(Bk2Bx2c) & !is.na(ddlat) & is.na(HGSIZE) & is.na(hgsize2)) %>%
+LatFilter  <- loc %>%  filter(is.na(Bk1Bx1a) & is.na(Bk1Bx1b) & is.na(Bk1Bx1c) & is.na(Bk2Bx2a)  & is.na(Bk2Bx2b) & is.na(Bk2Bx2c) & !is.na(ddlat)) %>%
   mutate(ddlong = ddlong*-1)
+
+
 
 # qa the lat long filter, there is alot of bad coordinates
 notused5 = LatFilter %>%
-  filter(ddlat > 50 | ddlong < -150) %>%
+  filter(ddlat > 50 | ddlong < -150  | is.na(ddlong) ) %>%
   mutate(Reason = "Bad COORDS REPORTED")
 
 LatFilter = LatFilter %>%
@@ -189,12 +161,50 @@ coords_wblocks = filter(coords_wblocks, !is.na(Bk1Bx1a))
 all_locations = rbind(BlkFilter, coords_wblocks)
 
 
+# count the number of times a unique id code appears in the location data
+freq_summary <- all_locations %>% group_by(id_loc) %>% count()
+
+#Calculate percentage of occurrence where frequency of singular id code > 1 and calculate the maximum number of duplicate ID codes
+per = (nrow(filter(freq_summary, n > 1))/nrow(freq_summary))*100
+message(paste(round(per,2), "% of ids have duplicates with a maximum of ", max(freq_summary$n), "duplicates."))
+
+# new script to aggregate all blocks from these duplicate ID codes that are missing locn to a single row for that ID
+qa_duplicates = all_locations %>%
+  left_join(freq_summary, by = "id_loc") %>%
+  filter(n> 1) %>%
+  pivot_longer(Bk1Bx1a:Bk2Bx2c, names_to = "col", values_to = 'Block') %>%
+  filter(!is.na(Block)) %>%
+  select(-col, -HLDEPTH, -HLDEPTH2) %>%
+  unique() %>% # remove when a block is repeated in the duplicate IDs
+  group_by(id_loc) %>%
+  mutate(block_col = row_number()) %>%
+  pivot_wider(names_from = block_col, values_from = Block) %>%
+  rename("Bk1Bx1a"="1","Bk1Bx1b"="2","Bk1Bx1c"="3","Bk2Bx2a"="4","Bk2Bx2b"="5","Bk2Bx2c"="6",'extrablock7' = '7','extrablock8' = '8', 'extrablock9' = '9', 'extrablock10' = '10', 'extrablock11' = '11',  'freq'='n')  # small numbner of ids have more than 6 total blocks reported across their duplicate IDs, lots of downstream fixes to integrate these may not be worth it because its a 'sloppy' fix. If new data was brought in with more than 11 blocks, the script would break
+
+
+# join back in this count data
+all_locations <- all_locations %>%
+  left_join(freq_summary, by = "id_loc") %>%
+  arrange(id_loc) %>%
+  rename(freq = n)
+
+
+#filter to just ids used once
+all_locations = filter(all_locations, freq == 1) %>%
+  bind_rows(qa_duplicates) %>% # add back in duplicate IDs that now have all blocks grouped together under a single ID row
+  relocate('extrablock7', .after = 'Bk2Bx2c') %>%
+  relocate('extrablock8', .after = 'extrablock7') %>%
+  relocate('extrablock9', .after = 'extrablock8') %>%
+  relocate('extrablock10', .after = 'extrablock9') %>%
+  relocate('extrablock11', .after = 'extrablock10')
+
+
 # this counts the number of UNIQUE blocks reported in each row of data, simplifies the long repeated lines in WINNS code
-all_locations <- cbind(all_locations, total_blocks = apply(all_locations[, Bk1Bx1a:Bk2Bx2c], 1, function(x)length(unique(x[!is.na(x)]))))
+all_locations <- cbind(all_locations, total_blocks = apply(all_locations[, Bk1Bx1a:extrablock11], 1, function(x)length(unique(x[!is.na(x)]))))
 
 
-notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason), unique(notused4$Reason), unique(notused5$Reason), unique(notused6$Reason)), 
-                             c(nrow(notused), nrow(notused2), nrow(notused3), nrow(notused4), nrow(notused5), nrow(notused6)))
+notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused4$Reason), unique(notused5$Reason), unique(notused6$Reason)), 
+                             c(nrow(notused), nrow(notused2), nrow(notused4), nrow(notused5), nrow(notused6)))
 names(notused_summary) = c("Reason", "Count")
 
 
