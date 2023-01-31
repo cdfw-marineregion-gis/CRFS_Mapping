@@ -94,8 +94,8 @@ fishinspected = dat %>%
   filter(n > 1) %>%
   left_join(dat)
 
-# Create tally for groups of identical records for id_n, SP_CODE and FSHINSP. Data has a unique row for each weight data entered. Need to account for this in total fish count. THIS IS OLD LOGIC NEED TO CONFIRM or MAYBE SIMPLIFY WHY FSHINSP IS INCLUDED
-df  <- dat %>% mutate(unique_id = paste(id, SP_CODE, FSHINSP, sep="_"))
+# Create tally for groups of identical records for id_n, SP_CODE. Data has a unique row for each weight data entered. Need to account for this in total fish count. 
+df  <- dat %>% mutate(unique_id = paste(id, SP_CODE, sep="_"))
 dups = df %>% group_by(unique_id) %>% summarise(Ob_Weighed_Fish = n())
 
 # join the freq_id counter to table so that total fish can be divided
@@ -117,7 +117,7 @@ by_block = oc_sorted %>%
 
 # aggregates to the id-block-species level the total number of fish caught and the average weight, this output is later used in another script to calculate different metrics but I thought there would be some utility in keeping things at the ID level (easily aggregate to a variety of temporal or sample level metrics)
 oc_by_id_agg_04_15 = by_block %>%
-  group_by(id, ID_CODE, locn, date, month, year, Block,  SP_CODE, FSHINSP, Common_Name, Ob_Weighed_Fish) %>%
+  group_by(id, ID_CODE, locn, date, month, year, Block,  SP_CODE, Common_Name, Ob_Weighed_Fish) %>%
   summarise(Ob_Kept  = sum(Ob.Kept, na.rm = T), 
             Ob_AvKWgt = mean(Ob.KWgt, na.rm=TRUE)) %>%
   mutate(Total_Obs_Fish_Caught =  Ob_Kept) 
