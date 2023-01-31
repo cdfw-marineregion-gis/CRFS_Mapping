@@ -13,8 +13,6 @@ library(stringi)
 library(tidyverse)
 library(lubridate)
 library(here)
-library(sf)
-library(leaflet)
 options(scipen = 999)
 
 # to put the cart before the horse, this line is required when sourcing multiple R scripts. The plan is to run all required catch and effort scripts in a "master" script to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. Youll see it in the other scripts as well.
