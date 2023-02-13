@@ -61,7 +61,9 @@ oc_species <- oc %>%
 nrow(oc) == (nrow(oc_species) + nrow(notused2))
 
 
-
+test_id = oc_species %>%
+  group_by(id) %>%
+  count()
 # Merge together catch and location data ----------------------------------
 # joining variable is the id, select required columns
 oc_species_loc <- oc_species %>%
@@ -72,6 +74,13 @@ oc_species_loc <- oc_species %>%
 notused3 <- oc_species %>%
   anti_join(all_locations, by = c("id"= "id_loc")) %>%
   mutate(Reason = "Does not have corresponding location data by ID")
+
+# checks for a bad join where id is duplicated
+test_id2 = oc_species_loc %>%
+  group_by(id) %>%
+  count() %>%
+  inner_join(test_id, by = 'id') %>%
+  filter(n.x != n.y)
 
 
 # Part 2 Aggregate Block Data ---------------------------------------------
