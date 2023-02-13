@@ -52,6 +52,7 @@ cpue_combos = all_by_id %>%
 
 catch_noeffort = filter(all_by_id, !is.na(Common_Name_catch) & is.na(Common_Name_effort)) # may need to be removed
 effort_nocatch = filter(all_by_id, is.na(Common_Name_catch) & !is.na(Common_Name_effort))
+
 notused= catch_noeffort %>%
   mutate(Reason = "Catch was reported with no corresponding effort")
 
@@ -89,6 +90,37 @@ cpua_year_aggregated = cpua %>%
   select(-fish_total_weight, -fish_total_weighed, -Ob_Kept, -Rep_Kept) %>%
   select(year, Block, Common_Name_catch, TripType_Description_effort,  Rep_Released, Kept, Total_Fish_Caught, AnglerDays, Days, Cntrbs, Vessels, Ob_AvKWgt, CPUA)
 
+# new estimate for effort over all years
+effort = all_by_id %>%
+  filter(!(!is.na(Common_Name_catch) & is.na(Common_Name_effort))) %>%
+  group_by(Block, ID_CODE) %>%
+  summarise(AnglerDays = mean(AnglerDays, na.rm = T),
+            Days = mean(Days, na.rm = T),
+            Cntrbs = mean(Cntrbs, na.rm = T),
+            Vessels = mean(Vessels, na.rm = T)) %>%
+  group_by(Block) %>%
+  summarise(n_samples = n_distinct(ID_CODE),
+            AnglerDays = sum(AnglerDays, na.rm = T),
+            Days = sum(Days, na.rm = T),
+            Cntrbs = sum(Cntrbs, na.rm = T),
+            Vessels = sum(Vessels, na.rm = T))
+
+effort_type = all_by_id %>%
+  filter(!(!is.na(Common_Name_catch) & is.na(Common_Name_effort))) %>%
+  filter(TripType_Description_effort != "") %>%
+  group_by(Block, TripType_Description_effort) %>%
+  summarise(n_samples = n_distinct(ID_CODE)) %>%
+  pivot_wider(names_from=TripType_Description_effort, values_from = n_samples)
+
+effort = effort %>%
+  left_join(effort_type)
+
+write.csv(effort , "Outputs/PR_Effort.csv", row.names = F, na = "")
+
+
+
+
+
 
 # need to look into infinite values
 cpua_year_aggregated = cpua_year_aggregated %>%
@@ -96,18 +128,18 @@ cpua_year_aggregated = cpua_year_aggregated %>%
 
 write.csv(cpua_year_aggregated , "Outputs/PR_CPUA.csv", row.names = F, na = "")
 
-test = cpua_year_aggregated %>% filter(Common_Name_catch == 'lingcod')
-
-samplesize= cpua_year_aggregated %>%
-  group_by(n_samples) %>% 
-  summarise(count = n(),
-            mean_cpua = mean(CPUA, na.rm = T),
-            max_cpua = max(CPUA, na.rm = T))
-
-nas = filter(cpua_year_aggregated, is.na(CPUA))
-
-library(ggplot2)
-
-ggplot(test, aes(n_samples, CPUA)) +
-  geom_point() +
-  theme_classic()
+# test = cpua_year_aggregated %>% filter(Common_Name_catch == 'lingcod')
+# 
+# samplesize= cpua_year_aggregated %>%
+#   group_by(n_samples) %>% 
+#   summarise(count = n(),
+#             mean_cpua = mean(CPUA, na.rm = T),
+#             max_cpua = max(CPUA, na.rm = T))
+# 
+# nas = filter(cpua_year_aggregated, is.na(CPUA))
+# 
+# library(ggplot2)
+# 
+# ggplot(test, aes(n_samples, CPUA)) +
+#   geom_point() +
+#   theme_classic()
