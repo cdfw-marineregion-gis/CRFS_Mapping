@@ -28,26 +28,35 @@ format_box = function(block_column, microblock_column) {
   return(combined_noblanks)
 }
 
+i8_new = fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i8_data_16to21.csv'), fill = TRUE) %>%
+  rename(ID_CODE = id_code) %>%
+  mutate_all(as.character)
+
 # Read in location data, or the i8 data table for northern california
 NLocList <- fread(file = here("RCode", "PR", "Dat04to15", "Data", "i8_1999-2016_NorCal_235374r.csv"), fill = TRUE, na.string = c("",".", "NA")) 
-
-# create new id based on id code and location number, format boxes into XX-XXX format, apply to each block column
-NLocList <- NLocList %>% 
-  mutate(locn = ifelse(is.na(locn)| locn == 0, 1, locn),
-         block1 = ifelse(block1 == 9999999, NA, block1),
-         id_loc = as.character(paste(ID_CODE, locn, sep="")),
-         Bk1Bx1a = format_box(block1, box1a),  
-         Bk1Bx1b = format_box(block1, box1b), 
-         Bk1Bx1c  = format_box(block1, box1c), 
-         Bk2Bx2a  = format_box(block2, box2a), 
-         Bk2Bx2b  = format_box(block2, box2b), 
-         Bk2Bx2c  = format_box(block2, box2c)) %>%
-  select(id_loc,ID_CODE, survey, MODE_FX, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, HGSIZE, hgsize2)
-
 # read in i8 location data for southern california
 SLocList <- fread(file = here("RCode", "PR", "Dat04to15", "Data", "i8_1999-2016_SoCal_204029r.csv"), fill = TRUE, na.string = c("",".", "NA")) 
 
-SLocList <- SLocList %>% 
+#combine north and south locaiton data together
+loc = rbind(NLocList, SLocList) %>%
+  mutate_all(as.character) %>%
+  mutate( 
+    date = ymd(stri_sub(ID_CODE, 6, 13)), 
+    year = year(date)) %>%
+  filter(year != 2016) %>% # duplicate to what CDFW produced. Need to confirm
+  select(-date, -month)
+
+setdiff(names(i8_new), names(loc))
+# [1] "assnid"  "Ref #"  
+
+setdiff(names(loc), names(i8_new))
+
+
+loc = bind_rows(loc, i8_new)
+
+# create new id based on id code and location number, format boxes into XX-XXX format, apply to each block column
+
+loc <- loc %>% 
   mutate(locn = ifelse(is.na(locn)| locn == 0, 1, locn),
          block1 = ifelse(block1 == 9999999, NA, block1),
          id_loc = as.character(paste(ID_CODE, locn, sep="")),
@@ -57,10 +66,13 @@ SLocList <- SLocList %>%
          Bk2Bx2a = format_box(block2, box2a), 
          Bk2Bx2b = format_box(block2, box2b), 
          Bk2Bx2c = format_box(block2, box2c)) %>%
-  select(id_loc,ID_CODE, survey, MODE_FX, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, HGSIZE, hgsize2)
+  mutate( 
+         date = ymd(stri_sub(ID_CODE, 6, 13)), 
+         month = month(date), 
+         year = year(date)) %>%
+  select(id_loc, year, ID_CODE, MODE_FX, survey, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, HGSIZE, hgsize2)
 
-#combine north and south locaiton data together
-loc = rbind(NLocList, SLocList)
+
 
 
 # remove any data that is not PR (MODE_FX = 7)
@@ -68,6 +80,7 @@ notused = loc %>%
   filter(MODE_FX != 7 | is.na(MODE_FX)) %>%
   mutate(Reason = "Location not MODE_FX == 7 (PR data)")
 unique(notused$MODE_FX)
+write.csv(notused, 'Outputs/NotUsed/i8/notused.csv', row.names = F, na = "")
 
 loc <- loc %>% 
   filter(MODE_FX ==7)
@@ -76,10 +89,18 @@ loc <- loc %>%
 loc[loc==""]<-NA
 
 before = nrow(loc)
-# remove data that does not have block or coordiantes reported
+# remove data that does not have block or coordinates reported
 notused2 = loc %>%
   filter(is.na(Bk1Bx1a) & is.na(Bk1Bx1b) & is.na(Bk1Bx1c) & is.na(Bk2Bx2a) & is.na(Bk2Bx2b)  & is.na(Bk2Bx2c) & is.na(ddlat)) %>%
   mutate(Reason = "Location data does not include any block or coordinate data.")
+write.csv(notused2, 'Outputs/NotUsed/i8/notused2.csv', row.names = F, na = "")
+
+
+#lots of new data does not have block or coordinate data
+newdata_test = i8_new %>%
+  filter(ID_CODE %in% notused2$ID_CODE)
+
+write.csv(newdata_test, 'Outputs/i8_new_weirdblockformat.csv', na = "")
 
 removed = nrow(notused2)
 
@@ -95,14 +116,15 @@ before - removed == after
 # remove any blocks that have an hgsize inputted, this field is where the survey gives the "range" of blocks visited?
 hgsize_summary = loc %>% group_by(HGSIZE) %>% count()
 
-notused4 = filter(loc, !is.na(HGSIZE) | !is.na(hgsize2)) %>%
-  mutate(Reason = "HGSize or HGSize2 reported ")
+notused3 = filter(loc, !is.na(HGSIZE) | !is.na(hgsize2)) %>%
+  mutate(Reason = "HGSize or HGSize2 reported ") #2004 and 2005 is the majority of this data
+write.csv(notused3, 'Outputs/NotUsed/i8/notused3.csv', row.names = F, na = "")
 
 
 loc = loc %>%
   filter(is.na(HGSIZE) & is.na(hgsize2))
 
-nrow(loc) + nrow(notused4) == after
+nrow(loc) + nrow(notused3) == after
 
 
 #pull out the data that has blocks report
@@ -111,14 +133,17 @@ BlkFilter <- loc  %>%
 
 #pull out the data has has lat longs reported INSTEAD of blocks
 LatFilter  <- loc %>%  filter(is.na(Bk1Bx1a) & is.na(Bk1Bx1b) & is.na(Bk1Bx1c) & is.na(Bk2Bx2a)  & is.na(Bk2Bx2b) & is.na(Bk2Bx2c) & !is.na(ddlat)) %>%
-  mutate(ddlong = ddlong*-1)
+  mutate(ddlong = as.numeric(ddlong)*-1) %>%
+  mutate(ddlat = as.numeric(ddlat))
 
 
 
 # qa the lat long filter, there is alot of bad coordinates
-notused5 = LatFilter %>%
+notused4 = LatFilter %>%
   filter(ddlat > 50 | ddlong < -150  | is.na(ddlong) ) %>%
   mutate(Reason = "Bad COORDS REPORTED")
+write.csv(notused4, 'Outputs/NotUsed/i8/notused4.csv', row.names = F, na = "")
+
 
 LatFilter = LatFilter %>%
   filter(ddlat < 50 & ddlong > -150)
@@ -151,8 +176,9 @@ coords_wblocks = coords_wblocks.SP %>%
   select(colnames(BlkFilter))
 
 # remove any data that did not get blocks after join
-notused6 = filter(coords_wblocks, is.na(Bk1Bx1a)) %>%
+notused5 = filter(coords_wblocks, is.na(Bk1Bx1a)) %>%
   mutate(Reason = "No fishing block overlapped with coordinate.")
+write.csv(notused5, 'Outputs/NotUsed/i8/notused5.csv', row.names = F, na = "")
 
 #only data that had a block joined
 coords_wblocks = filter(coords_wblocks, !is.na(Bk1Bx1a))
@@ -181,6 +207,8 @@ qa_duplicates = all_locations %>%
   pivot_wider(names_from = block_col, values_from = Block) %>%
   rename("Bk1Bx1a"="1","Bk1Bx1b"="2","Bk1Bx1c"="3","Bk2Bx2a"="4","Bk2Bx2b"="5","Bk2Bx2c"="6",'extrablock7' = '7','extrablock8' = '8', 'extrablock9' = '9', 'extrablock10' = '10', 'extrablock11' = '11',  'freq'='n')  # small numbner of ids have more than 6 total blocks reported across their duplicate IDs, lots of downstream fixes to integrate these may not be worth it because its a 'sloppy' fix. If new data was brought in with more than 11 blocks, the script would break
 
+byyear = qa_duplicates %>% group_by(year) %>% count()
+
 
 # join back in this count data
 all_locations <- all_locations %>%
@@ -203,8 +231,8 @@ all_locations = filter(all_locations, freq == 1) %>%
 all_locations <- cbind(all_locations, total_blocks = apply(all_locations[, Bk1Bx1a:extrablock11], 1, function(x)length(unique(x[!is.na(x)]))))
 
 
-notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused4$Reason), unique(notused5$Reason), unique(notused6$Reason)), 
-                             c(nrow(notused), nrow(notused2), nrow(notused4), nrow(notused5), nrow(notused6)))
+notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason), unique(notused4$Reason), unique(notused5$Reason)), 
+                             c(nrow(notused), nrow(notused2), nrow(notused3), nrow(notused4), nrow(notused5)))
 names(notused_summary) = c("Reason", "Count")
 
 
