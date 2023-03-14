@@ -1,6 +1,6 @@
-# PR Observed Catch 2004_2015 ---------------------------------------------
+# PR Observed Catch ---------------------------------------------
 
-# Michael Patton's (michael.patton@wildlife.ca.gov) R script to clean and aggregate the CRFS observed catch data (i3 table) for the years 2004-2015
+# Michael Patton's (michael.patton@wildlife.ca.gov) R script to clean and aggregate the CRFS observed catch data (i3 table)
 
 # copy path to where you downloaded the shared CRFS_Mapping folder between the ()
 working_directory = r"(C:\Users\MPatton\OneDrive - California Department of Fish and Wildlife\CRFS_Mapping)"
@@ -15,7 +15,7 @@ library(here)
 options(scipen = 999)
 
 # this line is required when sourcing multiple R scripts. PR_Output.R runs this and the other cleaning scripts to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. 
-rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "rc_by_id_agg_04_15" ,'all_locations')])
+rm(list = ls()[!ls() %in% c("oc_by_id_agg", "oe_by_id_agg", "rc_by_id_agg" ,'all_locations')])
 
 # sources the script that is used to clean up the i8 table, returns a single variable 'all_locations' that provides the cleanup blocks at the ID level. Went through a series of filters as well. See PR_Location.R for more information. 
 source(here('RCode', "PR", "Locations", 'PR_Location.R'))
@@ -30,7 +30,6 @@ oc_16on <- fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i3_data_1
 setdiff(names(oc_16on), names(oc))
 # [1] "assnid"    "scan_rslt" "Ref #" 
 setdiff(names(oc), names(oc_16on))
-
 
 oc = oc %>%
   bind_rows(oc_16on)
@@ -66,6 +65,7 @@ unique(notused2$SP_CODE)
 
 byyear = notused2 %>% group_by(year) %>% count()
 
+
 #join together catch and species
 oc_species <- oc %>%
   inner_join(Sp, by = c("SP_CODE" = "PSMFC_Code")) 
@@ -83,10 +83,13 @@ oc_species_loc <- oc_species %>%
   inner_join(all_locations, by = c("id"= "id_loc"))  %>% 
   select(id, ID_CODE, locn, date, month, year = year.x, SP_CODE, ALPHA5, Common_Name, TripType_Description, DISP3, WGT, FSHINSP, HLDEPTH, HLDEPTH2, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, extrablock7,  extrablock8,  extrablock9,  extrablock10, extrablock11, total_blocks)
 
+
 #pull out data that is lost in the join (id does not have any location data)
 notused3 <- oc_species %>%
   anti_join(all_locations, by = c("id"= "id_loc")) %>%
   mutate(Reason = "Does not have corresponding location data by ID")
+
+byyear = notused3 %>% group_by(year) %>% count()
 
 # checks for a bad join where id is duplicated
 test_id2 = oc_species_loc %>%
@@ -149,8 +152,7 @@ notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), 
                              c(nrow(notused), nrow(notused2), nrow(notused3)))
 names(notused_summary) = c("Reason", "Count")
 
-
-
 write.csv(oc_by_id_agg, "Outputs/oc.csv", na = "", row.names = F)
 write.csv(notused_summary, "Outputs/oc_notusedsummary.csv", na = "", row.names = F)
+
 

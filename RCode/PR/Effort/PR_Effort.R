@@ -9,6 +9,7 @@ working_directory = r"(C:\Users\MPatton\OneDrive - California Department of Fish
 setwd(working_directory)
 
 #load in required packages, if R says the package is not installed then run the following code in the console below install.packages("packagename") so for example install.packages("data.table")
+library(data.table)
 library(stringi)
 library(tidyverse)
 library(lubridate)
@@ -18,10 +19,8 @@ options(scipen = 999)
 # sources the script that is used to clean up the i8 table, returns a single variable 'all_locations' that provides the cleanup blocks at the ID level. Went through a series of filters as well. See other script for more information. 
 source(here('RCode', "PR", "Locations", 'PR_Location.R'))
 
-
-
 # this line is required when sourcing multiple R scripts. The plan is to run all required catch and effort scripts in a "master" script to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. Youll see it in the other scripts as well.
-rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "rc_by_id_agg_04_15", 'all_locations')])
+rm(list = ls()[!ls() %in% c("oc_by_id_agg", "oe_by_id_agg", "rc_by_id_agg", 'all_locations')])
 
 # remove id with location since location is not used with effort. Additionally, there are some situations where they same blocks are used in different locations. This leads to double counting in effort
 all_locations_effort = all_locations %>%
@@ -77,7 +76,6 @@ prims_stat = oe %>%
   arrange(desc(n)) %>%
   mutate(different_type = Trip_1 != Trip_2) %>%
   mutate(different_type =  ifelse(is.na(different_type), FALSE, different_type))
-
 #write.csv(prims_stat, "Outputs/Observed_Effort_Prim1vPrim2.csv", row.names = FALSE, na = "")
 
 # cleans up id, date, month and year. 
@@ -90,7 +88,7 @@ oe <- oe %>%
                     year = year(date))%>%
   select(id, year, month, date, prim1, prim2, CNTRBTRS, DAYSF, HRSF) %>%
   left_join(Sp %>% select(PSMFC_Code, TripType_Description), by = c("prim1" = "PSMFC_Code")) %>%
-  mutate(primary = ifelse(TripType_Description == "Invertebrates" & !is.na(TripType_Description), prim2, prim1)) %>%
+  mutate(primary = ifelse(TripType_Description == "Invertebrates" & !is.na(TripType_Description), prim2, prim1)) %>% #NEED TO SORT OUT THE NAS
   select(-TripType_Description)
 
 #clean up DAYSF and CNTRBTRS fields so NAs are 0, if days are reported as 0 in the data but CNTRBTRS were reported, change the days fished to 1 (NEW LOGIC)
@@ -129,11 +127,6 @@ type_summary = oe_species %>%
   count() %>%
   arrange(desc(n)) # some invertebrates still make it through
 
-# summary of the different common names of sought species in the data. 
-common_name_summary = oe_species %>% 
-  group_by(Common_Name) %>%
-  count() %>%
-  arrange(desc(n))
 
 # check to make sure no duplicates were created or rows were lost
 nrow(oe) == (nrow(oe_species) + nrow(notused))
@@ -187,6 +180,15 @@ oe_by_id_agg = by_block %>%
             Cntrbs = sum(CntrbPerBlock, na.rm = T), 
             Vessels = sum(VesselPerBlock, na.rm = T),
             test_n = n()) %>%
+  filter(!is.na(Block))
+
+
+# aggregate effort to the id-block-species level. This will later be aggregated to the Triptype level but wanted to leave species in for now. 
+oe_by_id_agg = by_block %>%
+  group_by(id, date, month, year, Block, Common_Name, TripType_Description) %>%
+  summarise(Days = sum(DaysPerBlock, na.rm = T), 
+            Cntrbs = mean(CntrbPerBlock, na.rm = T), 
+            Vessels = sum(VesselPerBlock, na.rm = T)) %>%
   mutate(AnglerDays = Cntrbs*Days) %>%
   arrange(id) %>%
   rename(id_noloc = id)
@@ -200,3 +202,4 @@ names(notused_summary) = c("Reason", "Count")
 
 write.csv(oe_by_id_agg, "Outputs/oe.csv", na = "", row.names = F)
 write.csv(notused_summary, "Outputs/oe_notused_summary.csv", na = "", row.names = F)
+
