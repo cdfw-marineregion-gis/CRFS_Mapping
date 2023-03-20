@@ -1,29 +1,37 @@
-# PR Reported Catch 2004_2015 ---------------------------------------------
+# PR Reported Catch--------------------------------------------
 
 # Michael Patton's simplification of original script (PR_ObservedEffort_2004_2015km Part 1 and art2.R)
-#7/28/2022
 
 # copy path to where you downloaded the shared CRFS_Mapping folder between the ()
 working_directory = r"(C:\Users\MPatton\OneDrive - California Department of Fish and Wildlife\CRFS_Mapping)"
 setwd(working_directory)
 
 #load in required packages, if R says the package is not installed then run the following code in the console below: install.packages("packagename") so for example install.packages("data.table")
-library(data.table)
 library(stringi)
 library(tidyverse)
 library(lubridate)
 library(here)
 options(scipen = 999)
 
-# to put the cart before the horse, this line is required when sourcing multiple R scripts. The plan is to run all required catch and effort scripts in a "master" script to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. Youll see it in the other scripts as well.
-rm(list = ls()[!ls() %in% c("oc_by_id_agg", "oe_by_id_agg", "rc_by_id_agg", 'all_locations')])
-
 # sources the script that is used to clean up the i8 table, returns a single variable 'all_locations' that provides the cleanup blocks at the ID level. Went through a series of filters as well. See other script for more information. 
 source(here('RCode', "PR", "Locations", 'PR_Location.R'))
 
+# to put the cart before the horse, this line is required when sourcing multiple R scripts. The plan is to run all required catch and effort scripts in a "master" script to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. Youll see it in the other scripts as well.
+rm(list = ls()[!ls() %in% c("oc_by_id_agg", "oe_by_id_agg", "rc_by_id_agg", 'all_locations')])
 
 # read in the i2 table for reported catch
-rc = fread(here("RCode", "PR", "Dat04to15", "Data", "PR_i2_2004-2015_429673r.csv"), fill = T, na.string = c("",".") )
+rc = fread(here("RCode", "PR", "Dat04to15", "Data", "PR_i2_2004-2015_429673r.csv"), fill = T, na.string = c("",".") ) %>%
+  mutate_all(as.character)
+
+rc_16on <- fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i2_data_16to21.csv'), fill = TRUE) %>%
+  mutate_all(as.character)
+
+setdiff(names(rc_16on), names(rc))
+# [1] "assnid"    "scan_rslt" "Ref #" 
+setdiff(names(rc), names(rc_16on))
+
+rc = rc %>%
+  bind_rows(rc_16on)
 
 # Not used data will be combined as a separate output for review. Reasons are provided in new column. 
 notused = rc %>%
@@ -53,6 +61,8 @@ notused2 <- rc %>%
   mutate(Reason = "Species not found in Lookup.")
 unique(notused2$SP_CODE)
 
+byyear = notused2 %>% group_by(year, SP_CODE) %>% count()
+
 # join catch data with species
 rc_species <- rc %>%
   inner_join(Sp, by = c("SP_CODE" = "PSMFC_Code")) 
@@ -64,13 +74,13 @@ nrow(rc) == (nrow(rc_species) + nrow(notused2))
 
 rc_species_loc <- rc_species %>%
   inner_join(all_locations, by = c("id"= "id_loc"))  %>% 
-  select(id, ID_CODE, date, month, year, SP_CODE, ALPHA5, Common_Name, TripType_Description, prim1, prim2, SP_CODE, MODE_F, CNTRBTRS, DISPO, NUM_FISH, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, extrablock7,  extrablock8,  extrablock9,  extrablock10, extrablock11, HGSIZE, hgsize2, total_blocks)
+  select(id, ID_CODE, date, month, year = year.x, SP_CODE, ALPHA5, Common_Name, TripType_Description, prim1, prim2, SP_CODE, MODE_F, CNTRBTRS, DISPO, NUM_FISH, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, extrablock7,  extrablock8,  extrablock9,  extrablock10, extrablock11, HGSIZE, hgsize2, total_blocks)
 
 notused3 <- rc_species %>%
   anti_join(all_locations, by = c("id"= "id_loc")) %>%
   mutate(Reason = "Does not have corresponding location data by ID")
 
-
+byyear = notused3 %>% group_by(year) %>% count()
 
 dat <- rc_species_loc %>% 
   mutate(FishPerBlock = NUM_FISH/total_blocks)
