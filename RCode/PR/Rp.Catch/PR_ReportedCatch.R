@@ -1,14 +1,12 @@
-# PR Reported Catch 2004_2015 ---------------------------------------------
+# PR Reported Catch ---------------------------------------------
 
 # Michael Patton's simplification of original script (PR_ObservedEffort_2004_2015km Part 1 and art2.R)
-#7/28/2022
 
 # copy path to where you downloaded the shared CRFS_Mapping folder between the ()
 working_directory = r"(C:\Users\MPatton\OneDrive - California Department of Fish and Wildlife\CRFS_Mapping)"
 setwd(working_directory)
 
 #load in required packages, if R says the package is not installed then run the following code in the console below: install.packages("packagename") so for example install.packages("data.table")
-library(data.table)
 library(stringi)
 library(tidyverse)
 library(lubridate)
@@ -23,7 +21,18 @@ source(here('RCode', "PR", "Locations", 'PR_Location.R'))
 
 
 # read in the i2 table for reported catch
-rc = fread(here("RCode", "PR", "Dat04to15", "Data", "PR_i2_2004-2015_429673r.csv"), fill = T, na.string = c("",".") )
+rc = fread(here("RCode", "PR", "Dat04to15", "Data", "PR_i2_2004-2015_429673r.csv"), fill = T, na.string = c("",".") )  %>%
+  mutate_all(as.character)
+
+rc_16on <- fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i2_data_16to21.csv'), fill = TRUE) %>%
+  mutate_all(as.character)
+
+setdiff(names(rc_16on), names(rc))
+# [1] "assnid"    "scan_rslt" "Ref #" 
+setdiff(names(rc), names(rc_16on))
+
+rc = rc %>%
+  bind_rows(rc_16on)
 
 # Not used data will be combined as a separate output for review. Reasons are provided in new column. 
 notused = rc %>%
@@ -53,6 +62,8 @@ notused2 <- rc %>%
   mutate(Reason = "Species not found in Lookup.")
 unique(notused2$SP_CODE)
 
+byyear = notused2 %>% group_by(year, SP_CODE) %>% count()
+
 # join catch data with species
 rc_species <- rc %>%
   inner_join(Sp, by = c("SP_CODE" = "PSMFC_Code")) 
@@ -69,6 +80,8 @@ rc_species_loc <- rc_species %>%
 notused3 <- rc_species %>%
   anti_join(all_locations, by = c("id"= "id_loc")) %>%
   mutate(Reason = "Does not have corresponding location data by ID")
+
+byyear = notused3 %>% group_by(year) %>% count()
 
 
 
@@ -117,5 +130,5 @@ names(notused_summary) = c("Reason", "Count")
 
 
 
-write.csv(rc_by_id_agg_04_15, "Outputs/rc.csv", na = "", row.names = F)
+write.csv(rc_by_id_agg, "Outputs/rc.csv", na = "", row.names = F)
 write.csv(notused_summary, "Outputs/rc_notused_summary.csv", na = "", row.names = F)
