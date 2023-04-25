@@ -14,11 +14,11 @@ library(lubridate)
 library(here)
 options(scipen = 999)
 
-# this line is required when sourcing multiple R scripts. PR_Output.R runs this and the other cleaning scripts to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. 
-rm(list = ls()[!ls() %in% c("oc_by_id_agg", "oe_by_id_agg", "rc_by_id_agg" ,'all_locations')])
-
 # sources the script that is used to clean up the i8 table, returns a single variable 'all_locations' that provides the cleanup blocks at the ID level. Went through a series of filters as well. See PR_Location.R for more information. 
 source(here('RCode', "PR", "Locations", 'PR_Location.R'))
+
+# this line is required when sourcing multiple R scripts. PR_Output.R runs this and the other cleaning scripts to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. 
+rm(list = ls()[!ls() %in% c("oc_by_id_agg", "oe_by_id_agg", "rc_by_id_agg" ,'all_locations')])
 
 #  read in i3 table: sampler observed catch data. the here function provides the relative path to where the data is saved. 
 oc <- fread(file = here("RCode", "PR", "Dat04to15", "Data", "PR_i3_2004-2015_759607r.csv"), fill = TRUE, na.string = c("",".")) %>%
@@ -39,6 +39,8 @@ notused = oc %>%
   filter(is.na(as.numeric(SP_CODE)))  %>%
   mutate(Reason = "SP_CODE is not valid.")
 unique(notused$SP_CODE)
+write.csv(notused, 'Outputs/NotUsed/i3/notused.csv', row.names = F, na = "")
+
 
 # create a new id that combines the existing ID code with the location number. Extract the year, month and date. Select only the required columns. The NAs introduced by coercion warning message is for the SP Codes that are included in the not used object below. 
 oc <- oc %>% 
@@ -62,6 +64,8 @@ notused2 <- oc %>%
   anti_join(Sp, by = c("SP_CODE" = "PSMFC_Code")) %>%
   mutate(Reason = "Species not found in Lookup.")
 unique(notused2$SP_CODE)
+write.csv(notused2, 'Outputs/NotUsed/i3/notused2.csv', row.names = F, na = "")
+
 
 byyear = notused2 %>% group_by(year) %>% count()
 
@@ -90,6 +94,8 @@ notused3 <- oc_species %>%
   mutate(Reason = "Does not have corresponding location data by ID")
 
 byyear = notused3 %>% group_by(year) %>% count()
+write.csv(notused3, 'Outputs/NotUsed/i3/notused3.csv', row.names = F, na = "")
+
 
 # checks for a bad join where id is duplicated
 test_id2 = oc_species_loc %>%
@@ -111,6 +117,7 @@ dat <- oc_species_loc %>%
 dat <- dat %>% 
   mutate(FishPerBlock = fish/total_blocks)
 
+# weird situation where fishinspected is different by ID
 fishinspected = dat %>% 
   select(id, FSHINSP,Common_Name) %>%
   unique() %>%
@@ -140,12 +147,19 @@ by_block = oc_sorted %>%
   pivot_longer(Bk1Bx1a:extrablock11, names_to = "col", values_to = 'Block') %>%
   filter(!is.na(Block))
 
+
 # aggregates to the id-block-species level the total number of fish caught and the average weight, this output is later used in another script to calculate different metrics but I thought there would be some utility in keeping things at the ID level (easily aggregate to a variety of temporal or sample level metrics)
 oc_by_id_agg = by_block %>%
   group_by(id, ID_CODE, locn, date, month, year, Block,  SP_CODE, Common_Name, Ob_Weighed_Fish) %>%
   summarise(Ob_Kept  = sum(Ob.Kept, na.rm = T), 
             Ob_AvKWgt = mean(Ob.KWgt, na.rm=TRUE)) %>%
   mutate(Total_Obs_Fish_Caught =  Ob_Kept) 
+
+
+final_check = oc_by_id_agg %>%
+  group_by(id, Block, Common_Name) %>% 
+  count() %>%
+  filter(n > 1)
 
 
 notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason)), 

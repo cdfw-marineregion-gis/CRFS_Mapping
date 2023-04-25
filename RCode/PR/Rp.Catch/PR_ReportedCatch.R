@@ -1,6 +1,6 @@
 # PR Reported Catch ---------------------------------------------
 
-# Michael Patton's simplification of original script (PR_ObservedEffort_2004_2015km Part 1 and art2.R)
+# Michael Patton (michael.patton@wildlife.ca.gov)
 
 # copy path to where you downloaded the shared CRFS_Mapping folder between the ()
 working_directory = r"(C:\Users\MPatton\OneDrive - California Department of Fish and Wildlife\CRFS_Mapping)"
@@ -13,17 +13,18 @@ library(lubridate)
 library(here)
 options(scipen = 999)
 
-# to put the cart before the horse, this line is required when sourcing multiple R scripts. The plan is to run all required catch and effort scripts in a "master" script to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. Youll see it in the other scripts as well.
-rm(list = ls()[!ls() %in% c("oc_by_id_agg", "oe_by_id_agg", "rc_by_id_agg", 'all_locations')])
-
 # sources the script that is used to clean up the i8 table, returns a single variable 'all_locations' that provides the cleanup blocks at the ID level. Went through a series of filters as well. See other script for more information. 
 source(here('RCode', "PR", "Locations", 'PR_Location.R'))
 
+# to put the cart before the horse, this line is required when sourcing multiple R scripts. The plan is to run all required catch and effort scripts in a "master" script to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. Youll see it in the other scripts as well.
+rm(list = ls()[!ls() %in% c("oc_by_id_agg", "oe_by_id_agg", "rc_by_id_agg", 'all_locations')])
 
-# read in the i2 table for reported catch
+
+# read in the i2 table for reported catch for 2004-2015
 rc = fread(here("RCode", "PR", "Dat04to15", "Data", "PR_i2_2004-2015_429673r.csv"), fill = T, na.string = c("",".") )  %>%
   mutate_all(as.character)
 
+# read in 2016-2021 data
 rc_16on <- fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i2_data_16to21.csv'), fill = TRUE) %>%
   mutate_all(as.character)
 
@@ -31,14 +32,23 @@ setdiff(names(rc_16on), names(rc))
 # [1] "assnid"    "scan_rslt" "Ref #" 
 setdiff(names(rc), names(rc_16on))
 
+# combine all years of data
 rc = rc %>%
-  bind_rows(rc_16on)
+  bind_rows(rc_16on) %>%
+  unique() # for whatever reason there are some duplicated rows
+
+rc_org = rc
+not_all_na <- function(x) any(!is.na(x))
+rc_org = rc_org %>% select(where(not_all_na))
+
 
 # Not used data will be combined as a separate output for review. Reasons are provided in new column. 
 notused = rc %>%
   filter(is.na(as.numeric(SP_CODE)))  %>%
   mutate(Reason = "SP_CODE is not valid.")
 unique(notused$SP_CODE)
+write.csv(notused, 'Outputs/NotUsed/i2/notused.csv', row.names = F, na = "")
+
 
 # remove invalid SP CODEs, create new id from ID_CODE and location number (locn), extract date, month and year. Select only needed columns. 
 rc <- rc %>% 
@@ -63,6 +73,8 @@ notused2 <- rc %>%
 unique(notused2$SP_CODE)
 
 byyear = notused2 %>% group_by(year, SP_CODE) %>% count()
+write.csv(notused, 'Outputs/NotUsed/i2/notused2.csv', row.names = F, na = "")
+
 
 # join catch data with species
 rc_species <- rc %>%
@@ -75,18 +87,17 @@ nrow(rc) == (nrow(rc_species) + nrow(notused2))
 
 rc_species_loc <- rc_species %>%
   inner_join(all_locations, by = c("id"= "id_loc"))  %>% 
-  select(id, ID_CODE, date, month, year, SP_CODE, ALPHA5, Common_Name, TripType_Description, prim1, prim2, SP_CODE, MODE_F, CNTRBTRS, DISPO, NUM_FISH, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, extrablock7,  extrablock8,  extrablock9,  extrablock10, extrablock11, HGSIZE, hgsize2, total_blocks)
+  select(id, ID_CODE, date, month, year = year.x, SP_CODE, ALPHA5, Common_Name, TripType_Description, prim1, prim2, SP_CODE, MODE_F, CNTRBTRS, DISPO, NUM_FISH, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, extrablock7,  extrablock8,  extrablock9,  extrablock10, extrablock11, HGSIZE, hgsize2, total_blocks)
 
 notused3 <- rc_species %>%
   anti_join(all_locations, by = c("id"= "id_loc")) %>%
   mutate(Reason = "Does not have corresponding location data by ID")
-
 byyear = notused3 %>% group_by(year) %>% count()
-
+write.csv(notused3, 'Outputs/NotUsed/i2/notused3.csv', row.names = F, na = "")
 
 
 dat <- rc_species_loc %>% 
-  mutate(FishPerBlock = NUM_FISH/total_blocks)
+  mutate(FishPerBlock = as.numeric(NUM_FISH)/total_blocks)
 
 
 unique(dat$DISPO)
@@ -96,7 +107,7 @@ dat   <- dat %>%
   mutate(Rep.Released  = ifelse(DISPO %in% c(1,2,6), FishPerBlock, 0), 
          Rep.Kept = ifelse(DISPO %in% c(3,4,5,7), FishPerBlock, 0))
 
-# CONTRBTRS field creates duplicate entries for the same datapoint
+# small number of remaining duplicates from bad data entry
 duplicates = dat %>%
   group_by(id, SP_CODE, DISPO) %>%
   count()
@@ -107,7 +118,10 @@ dat = dat %>%
 # filter out data that had duplicate fishing counts, we may want to look into salvaging this data since contrbtrs is not important for catch
 notused4 = dat %>%
   filter(n > 1) %>%
-  mutate(Reason = "Duplicate IDs again")
+  mutate(Reason = "Duplicate IDs caused by data entry")
+
+byyear = notused4 %>% group_by(year) %>% count()
+write.csv(notused4, 'Outputs/NotUsed/i2/notused4.csv', row.names = F, na = "")
 
 rc_final = dat %>%
   filter(n == 1)
@@ -122,6 +136,11 @@ rc_by_id_agg = by_block %>%
   summarise(Rep_Released = sum(Rep.Released, na.rm = T), 
             Rep_Kept  = sum(Rep.Kept, na.rm = T)) %>%
   mutate(Total_Rep_Fish_Caught = Rep_Released + Rep_Kept)
+
+finalcheck = rc_by_id_agg %>%
+  group_by(id, Block, Common_Name) %>%
+  count() %>%
+  filter(n > 1)
 
 # create summary of data that is not used and the provided reason
 notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason), unique(notused4$Reason)), 

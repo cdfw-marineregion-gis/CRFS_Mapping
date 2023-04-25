@@ -1,4 +1,4 @@
-# PR Observed Effort 2004_2015 ---------------------------------------------
+# PR Effort  ---------------------------------------------
 
 # Michael Patton (michael.patton@wildlife.ca.gov)
 # script that processes the effort i1 table to provide a cleaned up and aggregated effort for each ID
@@ -9,7 +9,6 @@ working_directory = r"(C:\Users\MPatton\OneDrive - California Department of Fish
 setwd(working_directory)
 
 #load in required packages, if R says the package is not installed then run the following code in the console below install.packages("packagename") so for example install.packages("data.table")
-library(data.table)
 library(stringi)
 library(tidyverse)
 library(lubridate)
@@ -28,10 +27,12 @@ all_locations_effort = all_locations %>%
   unique()
 
 
-#read in the i1 table 
+
+#read in the i1 table for 2004-2015
 oe = fread(file=here("RCode", "PR", "Dat04to15", "Data", "PR_i1_2004-2015_487087r.csv"), fill = T, na.string = c("",".") )  %>%
   mutate_all(as.character)
 
+# read in i1 for 2016 to 2021
 new_oe <- fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i1_data_16to21.csv'), fill = TRUE) %>%
   mutate_all(as.character) %>%
   rename(DAYSF = daysf)
@@ -43,10 +44,9 @@ oe = oe %>% select(where(not_all_na))
 
 setdiff(names(new_oe), names(oe))
 #[1] "geara"  "boatn"  "assnid" "port"   "daysf"  "gearB"  "island" "nolic"  "missed" "Ref #" 
-
 setdiff(names(oe), names(new_oe))
 
-
+# combine all years of data
 oe = bind_rows(oe, new_oe)
 
 ### temporary code to investigate prim1 prim2 issue
@@ -115,7 +115,9 @@ notused <- oe %>%
 unique(notused$primary) # looks like a lot of sp codes re reported as the alpha code need to clean this up
 # NFOTH and others are used to indicate a non fishing vessel so are rightfully excluded
 
-byyear = notused %>% group_by(year) %>% count()
+byyear = notused %>% group_by(primary) %>% count()
+write.csv(notused, 'Outputs/NotUsed/i1/notused.csv', row.names = F, na = "")
+
 
 # join species lookup to data
 oe_species <- oe %>%
@@ -131,32 +133,24 @@ type_summary = oe_species %>%
 # check to make sure no duplicates were created or rows were lost
 nrow(oe) == (nrow(oe_species) + nrow(notused))
 
-test_id = oe_species %>%
-  group_by(id) %>%
-  count()
-
 oe_species_loc <- oe_species %>%
   inner_join(all_locations_effort, by = c("id" = "ID_CODE")) %>%
   rename(year = year.x)
 
-# checks for a bad join where id is duplicated
-test_id2 = oe_species_loc %>%
-  group_by(id, year) %>%
-  count() %>%
-  inner_join(test_id, by = 'id') %>%
-  filter(n.x != n.y)
-
 notused2 <- oe_species %>%
   anti_join(all_locations_effort, by = c("id"= "ID_CODE")) %>%
   mutate(Reason = "Does not have corresponding location data by ID")
-
 byyear = notused2 %>% group_by(year) %>% count()
+write.csv(notused2, 'Outputs/NotUsed/i1/notused2.csv', row.names = F, na = "")
+
 
 # do NOT normalize effort to the number of blocks visited so no block information is needed to be brought in
 dat <- oe_species_loc %>% 
   mutate(DaysPerBlock = DAYSF, 
          CntrbPerBlock = CNTRBTRS, 
          VesselPerBlock = 1)
+
+
 
 # pivot the data so each block reported for a single id has its own row. Counts are already normalized by blocks visited so this will not double count anything but greatly simplifies the logic that WINN uses to generate summary statistics
 by_block = dat %>%
@@ -165,12 +159,16 @@ by_block = dat %>%
   select(-col, -total_blocks) %>%
   unique() # remove situations where the same block is entered into different block columns
 
-# QA check for duplicate combinations that will lead to double counting
-y = by_block %>% 
-  group_by(id, year, Block, TripType_Description) %>% 
+# check for duplicates created by bad data entry that will effect the summing below
+# notes from FAP: these are caused by when a sampler completes two different PR1 assignments in the same day and an associated issue with data entry. Will remove for now
+duplicates = by_block %>%
+  group_by(id, Block, TripType_Description, year) %>%
   count() %>%
-  filter(n > 1)
+  filter(n > 1) %>%
+  left_join(by_block)
 
+by_block = by_block %>%
+  anti_join(duplicates)
 
 
 # aggregate effort to the id-block-species level. This will later be aggregated to the Triptype level but wanted to leave species in for now. 
@@ -178,20 +176,19 @@ oe_by_id_agg = by_block %>%
   group_by(id, date, month, year, Block, Common_Name, TripType_Description) %>%
   summarise(Days = sum(DaysPerBlock, na.rm = T), 
             Cntrbs = sum(CntrbPerBlock, na.rm = T), 
-            Vessels = sum(VesselPerBlock, na.rm = T),
-            test_n = n()) %>%
-  filter(!is.na(Block))
-
-
-# aggregate effort to the id-block-species level. This will later be aggregated to the Triptype level but wanted to leave species in for now. 
-oe_by_id_agg = by_block %>%
-  group_by(id, date, month, year, Block, Common_Name, TripType_Description) %>%
-  summarise(Days = sum(DaysPerBlock, na.rm = T), 
-            Cntrbs = mean(CntrbPerBlock, na.rm = T), 
             Vessels = sum(VesselPerBlock, na.rm = T)) %>%
   mutate(AnglerDays = Cntrbs*Days) %>%
   arrange(id) %>%
-  rename(id_noloc = id)
+  rename(id_noloc = id) %>%
+  filter(!is.na(Block))
+
+
+# QA check for duplicate combinations that will lead to double counting
+finalcheck = oe_by_id_agg %>%
+  group_by(id_noloc, Block, TripType_Description, year) %>%
+  count() %>%
+  filter(n > 1) %>%
+  left_join(new_oe, by = c('id_noloc' = 'ID_CODE'))
 
 # create summary of data that is not used and the provided reason
 notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason)), 

@@ -1,4 +1,4 @@
-# Standalone script to source all existing PR scripts (all years observed, reported catch and effort) and generate an output of CPUA (and other metrics) per block-year-species. Currently only set up for 04-15 data. 
+# Standalone script to source all existing PR scripts (all years observed catch, reported catch and effort) and generate an output of CPUA (and other metrics) per block-year-species. 
 
 
 #USER INPUT:
@@ -7,7 +7,6 @@ working_directory = r"(C:\Users\MPatton\OneDrive - California Department of Fish
 setwd(working_directory)
 
 
-library(data.table)
 library(stringi)
 library(tidyverse)
 library(lubridate)
@@ -17,14 +16,14 @@ options(scipen = 999)
 
 rm(list = ls())
 
-# individually source the observed catch, reported catch and observed effort scripts. This results in the final cleaned and aggregated data at the id level. Will take awhile to run
-source(here("RCode", "PR", "Dat04to15", "Ob.Catch", "PR_ObservedCatch_2004_2015_MP.R"))
-source(here("RCode", "PR", "Dat04to15", "Ob.Effort", "PR_ObservedEffort_2004_2015_MP.R"))
-source(here("RCode", "PR", "Dat04to15", "Rp.Catch", "PR_ReportedCatch_2004_2015_MP.R"))
-# does reported effort need to be here?
+# individually source the observed catch, reported catch and observed effort scripts. This results in the final cleaned and aggregated data at the id level. Will take awhile to run. Will eventually move to just reading in .csv outputs of these scripts once finalized.
+source(here("RCode", "PR", "Ob.Catch", "PR_ObservedCatch.R"))
+source(here("RCode", "PR", "Effort", "PR_Effort.R"))
+source(here("RCode", "PR", "Rp.Catch", "PR_ReportedCatch.R"))
+
 
 #removes all of the unneeded parameters from the source
-rm(list = ls()[!ls() %in% c("oc_by_id_agg_04_15", "oe_by_id_agg_04_15", "rc_by_id_agg_04_15")])
+rm(list = ls()[!ls() %in% c("oc_by_id_agg", "oe_by_id_agg", "rc_by_id_agg")])
 
 #read in species file
 Sp <- fread(here("Lookups", "SpeciesList210510.csv" )) 
@@ -33,29 +32,38 @@ Sp <- Sp %>%
   mutate(PSMFC_Code = as.numeric(PSMFC_Code)) %>%
   filter(Common_Name != "bivalve class")
 
+rc_by_id_agg = rc_by_id_agg %>%
+  mutate(year = as.character(year))
+oe_by_id_agg = oe_by_id_agg %>%
+  mutate(year = as.character(year))
 
 
 # CPUA by ID --------------------------------------------------------------
 
-all_by_id = oc_by_id_agg_04_15 %>%
-  full_join(rc_by_id_agg_04_15, by = c("id","ID_CODE", "SP_CODE", "Block", "Common_Name", "date", 'month', 'year')) %>%
+# the big join, full join of rc to oc by ID_loc, species, block. Bring in species info, then join in effort by ID (only) and block with no species. 
+all_by_id = oc_by_id_agg %>%
+  full_join(rc_by_id_agg, by = c("id","ID_CODE", "SP_CODE", "Block", "Common_Name", "date", 'month', 'year')) %>%
   left_join(Sp, by = c("Common_Name", "SP_CODE" = "PSMFC_Code")) %>%
-  full_join(oe_by_id_agg_04_15, by = c("ID_CODE" = "id_noloc", "Block", "date", 'month', 'year'), suffix = c("_catch", "_effort")) %>%
+  full_join(oe_by_id_agg, by = c("ID_CODE" = "id_noloc", "Block", "date", 'month', 'year'), suffix = c("_catch", "_effort")) %>%
   mutate(id = ifelse(is.na(id), ID_CODE, id))
 
 
+# summary tables to see al combos of catch vs effort
 cpue_combos = all_by_id %>%
   group_by(Common_Name_catch, Common_Name_effort, TripType_Description_catch, TripType_Description_effort) %>%
   count() %>%
   arrange(desc(n))
 
 
-catch_noeffort = filter(all_by_id, !is.na(Common_Name_catch) & is.na(Common_Name_effort)) # may need to be removed
+# check for bad matches between catch and effort
+catch_noeffort = filter(all_by_id, !is.na(Common_Name_catch) & is.na(Common_Name_effort)) 
 effort_nocatch = filter(all_by_id, is.na(Common_Name_catch) & !is.na(Common_Name_effort))
-
 notused= catch_noeffort %>%
   mutate(Reason = "Catch was reported with no corresponding effort")
+byyear = notused %>% group_by(year) %>% count()
 
+
+# remove catch where there is no effort and clean up table to neccessary fields
 cpua= all_by_id %>%
   ungroup() %>%
   filter(!(!is.na(Common_Name_catch) & is.na(Common_Name_effort))) %>%
@@ -63,17 +71,26 @@ cpua= all_by_id %>%
 
 
 # replaces NAs with 0s for the columns that will be aggregated
-# calculates the total weight of weighed fish by multiplying the average wiehgt by the number of weighed fish. This is then later summed so average of average is not used for average weight. 
+# calculates the total weight of weighed fish by multiplying the average weight by the number of weighed fish. This is then later summed so average of average is not used for average weight. 
 cpua = cpua %>%
   mutate(across(Ob_Weighed_Fish:AnglerDays, ~ifelse(is.na(.x),0,.x))) %>%
   mutate(fish_total_weight = Ob_AvKWgt*Ob_Weighed_Fish) %>%
   mutate(Total_Fish_Caught = Total_Obs_Fish_Caught + Total_Rep_Fish_Caught)
 
-# more infitiy to sort out 
+
+
+# final check for duplicates
+dups = cpua %>%
+  group_by(id, Block, Common_Name_catch, TripType_Description_effort) %>%
+  count() %>%
+  filter(n > 1) %>%
+  left_join(cpua)
+
+
+# the big summary for each year - block - caught species (catch) - triptype (effort)
 cpua_year_aggregated = cpua %>%
   group_by(year, Block, Common_Name_catch, TripType_Description_effort) %>%
   summarise(n_samples = n(),
-            n_samples2 = n_distinct(id),
             Ob_Kept = sum(Ob_Kept, na.rm = T),
             Rep_Released = sum(Rep_Released, na.rm = T),
             Rep_Kept = sum(Rep_Kept, na.rm = T),
@@ -87,9 +104,17 @@ cpua_year_aggregated = cpua %>%
   mutate(Kept = Ob_Kept + Rep_Kept) %>%
   mutate(Ob_AvKWgt = fish_total_weight/fish_total_weighed) %>%
   mutate(CPUA = Total_Fish_Caught/AnglerDays) %>%
-  select(-fish_total_weight, -fish_total_weighed, -Ob_Kept, -Rep_Kept) %>%
   select(year, Block, Common_Name_catch, TripType_Description_effort,  Rep_Released, Kept, Total_Fish_Caught, AnglerDays, Days, Cntrbs, Vessels, Ob_AvKWgt, CPUA)
 
+# need to look into infinite values
+cpua_year_aggregated = cpua_year_aggregated %>%
+  mutate(CPUA = ifelse(is.infinite(CPUA), 0, CPUA))
+
+write.csv(cpua_year_aggregated , "Outputs/PR_CPUA.csv", row.names = F, na = "")
+
+
+
+# Prepare an effort summary -----------------------------------------------
 # new estimate for effort over all years
 effort = all_by_id %>%
   filter(!(!is.na(Common_Name_catch) & is.na(Common_Name_effort))) %>%
@@ -105,6 +130,8 @@ effort = all_by_id %>%
             Cntrbs = sum(Cntrbs, na.rm = T),
             Vessels = sum(Vessels, na.rm = T))
 
+
+
 effort_type = all_by_id %>%
   filter(!(!is.na(Common_Name_catch) & is.na(Common_Name_effort))) %>%
   filter(TripType_Description_effort != "") %>%
@@ -115,18 +142,13 @@ effort_type = all_by_id %>%
 effort = effort %>%
   left_join(effort_type)
 
-write.csv(effort , "Outputs/PR_Effort.csv", row.names = F, na = "")
+#write.csv(effort , "Outputs/PR_Effort.csv", row.names = F, na = "")
 
 
 
 
+# QA Section to look for outliers -----------------------------------------
 
-
-# need to look into infinite values
-cpua_year_aggregated = cpua_year_aggregated %>%
-  mutate(CPUA = ifelse(is.infinite(CPUA), 0, CPUA))
-
-write.csv(cpua_year_aggregated , "Outputs/PR_CPUA.csv", row.names = F, na = "")
 
 # test = cpua_year_aggregated %>% filter(Common_Name_catch == 'lingcod')
 # 

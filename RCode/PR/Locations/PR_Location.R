@@ -43,16 +43,16 @@ loc = rbind(NLocList, SLocList) %>%
   mutate( 
     date = ymd(stri_sub(ID_CODE, 6, 13)), 
     year = year(date)) %>%
-  filter(year != 2016) %>% # duplicate to what CDFW produced. Need to confirm
+  filter(year != 2016) %>% # duplicate to what CDFW produced. 
   select(-date, -month)
 
 setdiff(names(i8_new), names(loc))
-# [1] "assnid"  "Ref #"  
+# [1] "assnid"  "Ref #"  # can integrate these ASSNID REF_NUM
 
 setdiff(names(loc), names(i8_new))
 
-
 loc = bind_rows(loc, i8_new)
+loc_org = loc
 
 # create new id based on id code and location number, format boxes into XX-XXX format, apply to each block column
 
@@ -81,6 +81,7 @@ notused = loc %>%
   mutate(Reason = "Location not MODE_FX == 7 (PR data)")
 unique(notused$MODE_FX)
 write.csv(notused, 'Outputs/NotUsed/i8/notused.csv', row.names = F, na = "")
+byyear = notused %>% group_by(year) %>% count()
 
 loc <- loc %>% 
   filter(MODE_FX ==7)
@@ -93,14 +94,20 @@ before = nrow(loc)
 notused2 = loc %>%
   filter(is.na(Bk1Bx1a) & is.na(Bk1Bx1b) & is.na(Bk1Bx1c) & is.na(Bk2Bx2a) & is.na(Bk2Bx2b)  & is.na(Bk2Bx2c) & is.na(ddlat)) %>%
   mutate(Reason = "Location data does not include any block or coordinate data.")
+# 2021 and 2020 missing a lot of data due to COVID
+# other data is mostly block1 reported with no box
+byyear = notused2 %>% group_by(year) %>% count()
+
 write.csv(notused2, 'Outputs/NotUsed/i8/notused2.csv', row.names = F, na = "")
 
 
 #lots of new data does not have block or coordinate data
-newdata_test = i8_new %>%
-  filter(ID_CODE %in% notused2$ID_CODE)
+newdata_test = loc_org %>%
+  filter(ID_CODE %in% notused2$ID_CODE) %>%
+  mutate(ID_CODE = paste0('ID', ID_CODE)) %>%
+  arrange(desc(YEAR))
 
-write.csv(newdata_test, 'Outputs/i8_new_weirdblockformat.csv', na = "")
+#write.csv(newdata_test, 'Outputs/i8_new_weirdblockformat.csv', na = "")
 
 removed = nrow(notused2)
 
@@ -110,16 +117,13 @@ after = nrow(loc)
 
 before - removed == after
 
-
-
-
 # remove any blocks that have an hgsize inputted, this field is where the survey gives the "range" of blocks visited?
 hgsize_summary = loc %>% group_by(HGSIZE) %>% count()
 
 notused3 = filter(loc, !is.na(HGSIZE) | !is.na(hgsize2)) %>%
   mutate(Reason = "HGSize or HGSize2 reported ") #2004 and 2005 is the majority of this data
 write.csv(notused3, 'Outputs/NotUsed/i8/notused3.csv', row.names = F, na = "")
-
+byyear = notused3 %>% group_by(year, HGSIZE, hgsize2) %>% count()
 
 loc = loc %>%
   filter(is.na(HGSIZE) & is.na(hgsize2))
@@ -230,9 +234,25 @@ all_locations = filter(all_locations, freq == 1) %>%
 # this counts the number of UNIQUE blocks reported in each row of data, simplifies the long repeated lines in WINNS code
 all_locations <- cbind(all_locations, total_blocks = apply(all_locations[, Bk1Bx1a:extrablock11], 1, function(x)length(unique(x[!is.na(x)]))))
 
+# final check for duplicates that will lead to double counting, these are caused by IDs reported twice using different Pr1 or Pr2. These are an error and should be removed
+pr1vpr2_duplicates = all_locations %>%
+  group_by(id_loc) %>%
+  count() %>%
+  filter(n > 1) %>%
+  left_join(all_locations)
 
-notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason), unique(notused4$Reason), unique(notused5$Reason)), 
-                             c(nrow(notused), nrow(notused2), nrow(notused3), nrow(notused4), nrow(notused5)))
+notused6 = all_locations %>%
+  filter((id_loc %in% pr1vpr2_duplicates$id_loc)) %>%
+  mutate(Reason = 'Duplicate IDs used for both Pr1 and Pr2')
+
+all_locations = all_locations %>%
+  filter(!(id_loc %in% pr1vpr2_duplicates$id_loc))
+
+
+
+
+notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason), unique(notused4$Reason), unique(notused5$Reason), unique(notused6$Reason)), 
+                             c(nrow(notused), nrow(notused2), nrow(notused3), nrow(notused4), nrow(notused5), nrow(notused6)))
 names(notused_summary) = c("Reason", "Count")
 
 
