@@ -28,7 +28,7 @@ format_box = function(block_column, microblock_column) {
   return(combined_noblanks)
 }
 
-i8_new = fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i8_data_16to21.csv'), fill = TRUE) %>%
+i8_new = fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i8_data_16to22.csv'), fill = TRUE) %>%
   rename(ID_CODE = id_code) %>%
   mutate_all(as.character)
 
@@ -45,6 +45,7 @@ loc = rbind(NLocList, SLocList) %>%
     year = year(date)) %>%
   filter(year != 2016) %>% # duplicate to what CDFW produced. 
   select(-date, -month)
+
 
 setdiff(names(i8_new), names(loc))
 # [1] "assnid"  "Ref #"  # can integrate these ASSNID REF_NUM
@@ -74,7 +75,6 @@ loc <- loc %>%
 
 
 
-
 # remove any data that is not PR (MODE_FX = 7)
 notused = loc %>% 
   filter(MODE_FX != 7 | is.na(MODE_FX)) %>%
@@ -99,16 +99,6 @@ notused2 = loc %>%
 byyear = notused2 %>% group_by(year) %>% count()
 
 write.csv(notused2, 'Outputs/NotUsed/i8/notused2.csv', row.names = F, na = "")
-
-
-#lots of new data does not have block or coordinate data
-newdata_test = loc_org %>%
-  filter(ID_CODE %in% notused2$ID_CODE) %>%
-  mutate(ID_CODE = paste0('ID', ID_CODE)) %>%
-  arrange(desc(YEAR))
-
-#write.csv(newdata_test, 'Outputs/i8_new_weirdblockformat.csv', na = "")
-
 removed = nrow(notused2)
 
 loc = loc %>%
@@ -117,17 +107,19 @@ after = nrow(loc)
 
 before - removed == after
 
-# remove any blocks that have an hgsize inputted, this field is where the survey gives the "range" of blocks visited?
-hgsize_summary = loc %>% group_by(HGSIZE) %>% count()
+# remove any blocks that have an hgsize greater than 1 reported, this field is where the survey gives the "range" of blocks visited and a decision was made to include no range or a small range of 1
+hgsize_summary = loc %>% group_by(HGSIZE, hgsize2) %>% count()
 
-notused3 = filter(loc, !is.na(HGSIZE) | !is.na(hgsize2)) %>%
+notused3 = filter(loc, HGSIZE > 1 | hgsize2 > 1) %>%
   mutate(Reason = "HGSize or HGSize2 reported ") #2004 and 2005 is the majority of this data
 write.csv(notused3, 'Outputs/NotUsed/i8/notused3.csv', row.names = F, na = "")
 byyear = notused3 %>% group_by(year, HGSIZE, hgsize2) %>% count()
 
 loc = loc %>%
-  filter(is.na(HGSIZE) & is.na(hgsize2))
+  filter((is.na(HGSIZE) | HGSIZE <=1) & (is.na(hgsize2) | hgsize2 <=1))
 
+# QA
+hgsize_summary = loc %>% group_by(HGSIZE, hgsize2) %>% count()
 nrow(loc) + nrow(notused3) == after
 
 
@@ -147,6 +139,7 @@ notused4 = LatFilter %>%
   filter(ddlat > 50 | ddlong < -150  | is.na(ddlong) ) %>%
   mutate(Reason = "Bad COORDS REPORTED")
 write.csv(notused4, 'Outputs/NotUsed/i8/notused4.csv', row.names = F, na = "")
+byyear = notused4 %>% group_by(year) %>% count()
 
 
 LatFilter = LatFilter %>%
@@ -244,6 +237,10 @@ pr1vpr2_duplicates = all_locations %>%
 notused6 = all_locations %>%
   filter((id_loc %in% pr1vpr2_duplicates$id_loc)) %>%
   mutate(Reason = 'Duplicate IDs used for both Pr1 and Pr2')
+write.csv(notused6, 'Outputs/NotUsed/i8/notused6.csv', row.names = F, na = "")
+
+
+byyear = notused6 %>% group_by(year) %>% count()
 
 all_locations = all_locations %>%
   filter(!(id_loc %in% pr1vpr2_duplicates$id_loc))
