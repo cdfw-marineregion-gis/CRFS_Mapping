@@ -40,7 +40,7 @@ for (table in tables){
     }
   }
   
-  write.csv(alldata, paste0(table, '_data_16to21.csv'), row.names = FALSE, na = "")
+  write.csv(alldata, paste0(table, '_data_16to22.csv'), row.names = FALSE, na = "")
   
   rm(alldata)
   
