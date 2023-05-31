@@ -24,7 +24,7 @@ rm(list = ls()[!ls() %in% c("oc_by_id_agg", "oe_by_id_agg", "rc_by_id_agg" ,'all
 oc <- fread(file = here("RCode", "PR", "Dat04to15", "Data", "PR_i3_2004-2015_759607r.csv"), fill = TRUE, na.string = c("",".")) %>%
   mutate_all(as.character)
 
-oc_16on <- fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i3_data_16to21.csv'), fill = TRUE) %>%
+oc_16on <- fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i3_data_16to22.csv'), fill = TRUE) %>%
   mutate_all(as.character)
 
 setdiff(names(oc_16on), names(oc))
@@ -53,7 +53,7 @@ oc <- oc %>%
   select(id, locn, date, month, year = YEAR, ALPHA5, SP_CODE, MODE_F, CNTRBTRS, DISP3, WGT, FSHINSP, HRSF)
 
 #Create species table by extracting data from SpeciesList.csv
-Sp<- fread(here("Lookups", "SpeciesList210510.csv" )) 
+Sp<- fread(here("Lookups", "SpeciesList05102023.csv" )) 
 Sp<- Sp %>% 
   select(PSMFC_Code, Common_Name, TripType_Description) %>% 
   mutate(PSMFC_Code = as.numeric(PSMFC_Code)) %>%
@@ -67,7 +67,7 @@ unique(notused2$SP_CODE)
 write.csv(notused2, 'Outputs/NotUsed/i3/notused2.csv', row.names = F, na = "")
 
 
-byyear = notused2 %>% group_by(year) %>% count()
+byyear = notused2 %>% group_by(year, SP_CODE) %>% count()
 
 
 #join together catch and species
@@ -76,6 +76,20 @@ oc_species <- oc %>%
 
 #check to make sure no duplicates were created or rows were lost, should return TRUE
 nrow(oc) == (nrow(oc_species) + nrow(notused2))
+
+
+# data validation
+weight = oc_species %>%
+  mutate(FSHINSP = as.numeric(FSHINSP),
+         WGT = as.numeric(WGT)) %>%
+  group_by(Common_Name) %>%
+  summarise(max_weight = max(WGT, na.rm = T),
+            min_weight = min(WGT, na.rm = T),
+            avg_weight = mean(WGT, na.rm = T),
+            max_fish = max(FSHINSP, na.rm = T),
+            min_fin = max(FSHINSP, na.rm = T),
+            avg_fish = mean(FSHINSP, na.rm = T))
+
 
 
 test_id = oc_species %>%
