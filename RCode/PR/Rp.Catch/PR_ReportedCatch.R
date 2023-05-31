@@ -7,6 +7,7 @@ working_directory = r"(C:\Users\MPatton\OneDrive - California Department of Fish
 setwd(working_directory)
 
 #load in required packages, if R says the package is not installed then run the following code in the console below: install.packages("packagename") so for example install.packages("data.table")
+library(data.table)
 library(stringi)
 library(tidyverse)
 library(lubridate)
@@ -25,7 +26,7 @@ rc = fread(here("RCode", "PR", "Dat04to15", "Data", "PR_i2_2004-2015_429673r.csv
   mutate_all(as.character)
 
 # read in 2016-2021 data
-rc_16on <- fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i2_data_16to21.csv'), fill = TRUE) %>%
+rc_16on <- fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i2_data_16to22.csv'), fill = TRUE) %>%
   mutate_all(as.character)
 
 setdiff(names(rc_16on), names(rc))
@@ -36,11 +37,6 @@ setdiff(names(rc), names(rc_16on))
 rc = rc %>%
   bind_rows(rc_16on) %>%
   unique() # for whatever reason there are some duplicated rows
-
-rc_org = rc
-not_all_na <- function(x) any(!is.na(x))
-rc_org = rc_org %>% select(where(not_all_na))
-
 
 # Not used data will be combined as a separate output for review. Reasons are provided in new column. 
 notused = rc %>%
@@ -58,10 +54,10 @@ rc <- rc %>%
          id = paste(ID_CODE, locn, sep= ""), 
          date = ymd(stri_sub(ID_CODE, 6, 13)), 
          month = month(date)) %>%  
-  select(id, date, month, year = YEAR, prim1, prim2, SP_CODE, MODE_F, MODE_FX, CNTRBTRS, DISPO, NUM_FISH) 
+  select(id, date, month, year = YEAR, prim1, prim2, SP_CODE, MODE_F, MODE_FX, CNTRBTRS, DISPO, NUM_FISH) # GET RID OF CNTRBTRS
 
 #Create species table by extracting data from SpeciesList.csv and merge species data with dfr_angrep data frame 
-Sp<- fread(here("Lookups", "SpeciesList210510.csv" )) 
+Sp<- fread(here("Lookups", "SpeciesList05102023.csv" )) 
 Sp<- Sp %>% 
   select(PSMFC_Code, Common_Name, TripType_Description, ALPHA5) %>% 
   mutate(PSMFC_Code = as.numeric(PSMFC_Code)) %>%
@@ -134,7 +130,8 @@ by_block = rc_final %>%
 rc_by_id_agg = by_block %>%
   group_by(id, ID_CODE, date, month, year, Block,  SP_CODE, Common_Name) %>%
   summarise(Rep_Released = sum(Rep.Released, na.rm = T), 
-            Rep_Kept  = sum(Rep.Kept, na.rm = T)) %>%
+            Rep_Kept  = sum(Rep.Kept, na.rm = T),
+            Contributors_rc = sum(as.numeric(CNTRBTRS), na.rm = T)) %>%
   mutate(Total_Rep_Fish_Caught = Rep_Released + Rep_Kept)
 
 finalcheck = rc_by_id_agg %>%
@@ -142,8 +139,8 @@ finalcheck = rc_by_id_agg %>%
   count() %>%
   filter(n > 1)
 
-# create summary of data that is not used and the provided reason
-notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason), unique(notused4$Reason)), 
+# create summary of data that is not used and the provided reason, manually write in notused2 reason as a temp fix because it went down to 0 rows
+notused_summary = data.frame(c(unique(notused$Reason), 'SP Code not found in lookup', unique(notused3$Reason), unique(notused4$Reason)), 
                              c(nrow(notused), nrow(notused2), nrow(notused3), nrow(notused4)))
 names(notused_summary) = c("Reason", "Count")
 
