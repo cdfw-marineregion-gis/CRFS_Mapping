@@ -9,6 +9,7 @@ working_directory = r"(C:\Users\MPatton\OneDrive - California Department of Fish
 setwd(working_directory)
 
 #load in required packages, if R says the package is not installed then run the following code in the console below install.packages("packagename") so for example install.packages("data.table")
+library(data.table)
 library(stringi)
 library(tidyverse)
 library(lubridate)
@@ -30,13 +31,12 @@ all_locations_effort = all_locations %>%
 
 #read in the i1 table for 2004-2015
 oe = fread(file=here("RCode", "PR", "Dat04to15", "Data", "PR_i1_2004-2015_487087r.csv"), fill = T, na.string = c("",".") )  %>%
-  mutate_all(as.character)
+  mutate_all(as.character) 
 
 # read in i1 for 2016 to 2021
-new_oe <- fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i1_data_16to21.csv'), fill = TRUE) %>%
+new_oe <- fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i1_data_16to22.csv'), fill = TRUE) %>%
   mutate_all(as.character) %>%
-  rename(DAYSF = daysf)
-
+  rename(DAYSF = daysf) 
 
 #remove all columns that are only NAs
 not_all_na <- function(x) any(!is.na(x))
@@ -50,7 +50,7 @@ setdiff(names(oe), names(new_oe))
 oe = bind_rows(oe, new_oe)
 
 ### temporary code to investigate prim1 prim2 issue
-Sp<- fread(here("Lookups", "SpeciesList210510.csv" )) 
+Sp<- fread(here("Lookups", "SpeciesList05102023.csv" )) 
 Sp<- Sp %>% 
   select(PSMFC_Code, Common_Name, TripType_Description) %>% 
   mutate(PSMFC_Code = as.character(PSMFC_Code)) %>%
@@ -88,8 +88,13 @@ oe <- oe %>%
                     year = year(date))%>%
   select(id, year, month, date, prim1, prim2, CNTRBTRS, DAYSF, HRSF) %>%
   left_join(Sp %>% select(PSMFC_Code, TripType_Description), by = c("prim1" = "PSMFC_Code")) %>%
-  mutate(primary = ifelse(TripType_Description == "Invertebrates" & !is.na(TripType_Description), prim2, prim1)) %>% #NEED TO SORT OUT THE NAS
+  mutate(primary = ifelse(TripType_Description == "Invertebrates" & !is.na(TripType_Description) & !is.na(prim2), prim2, prim1)) %>%
   select(-TripType_Description)
+
+
+# may want to convert these to anythings
+na_triptypes = oe %>%
+  filter(is.na(primary))
 
 #clean up DAYSF and CNTRBTRS fields so NAs are 0, if days are reported as 0 in the data but CNTRBTRS were reported, change the days fished to 1 (NEW LOGIC)
 oe <- oe %>% 
@@ -99,7 +104,7 @@ oe <- oe %>%
 
 
     #Create species table by extracting data from SpeciesList.csv and merge species data with dfr_angrep data frame 
-Sp<- fread(here("Lookups", "SpeciesList210510.csv" )) 
+Sp<- fread(here("Lookups", "SpeciesList05102023.csv" )) 
 Sp<- Sp %>% 
   select(ALPHA5, PSMFC_Code, Common_Name, TripType_Description) %>% 
   mutate(PSMFC_Code = as.character(PSMFC_Code)) %>%
@@ -115,7 +120,7 @@ notused <- oe %>%
 unique(notused$primary) # looks like a lot of sp codes re reported as the alpha code need to clean this up
 # NFOTH and others are used to indicate a non fishing vessel so are rightfully excluded
 
-byyear = notused %>% group_by(primary) %>% count()
+byyear = notused %>% group_by(year, primary) %>% count()
 write.csv(notused, 'Outputs/NotUsed/i1/notused.csv', row.names = F, na = "")
 
 
@@ -151,6 +156,15 @@ dat <- oe_species_loc %>%
          VesselPerBlock = 1)
 
 
+notused3 = dat %>%
+  filter(CntrbPerBlock == 0) %>%
+  mutate(Reason = 'Zero contributors reported in data')
+
+byyear = notused3 %>% group_by(year) %>%
+  count()
+write.csv(notused3, 'Outputs/NotUsed/i1/notused3.csv', row.names = F, na = "")
+
+dat = filter(dat, CntrbPerBlock > 0)
 
 # pivot the data so each block reported for a single id has its own row. Counts are already normalized by blocks visited so this will not double count anything but greatly simplifies the logic that WINN uses to generate summary statistics
 by_block = dat %>%
@@ -182,6 +196,9 @@ oe_by_id_agg = by_block %>%
   rename(id_noloc = id) %>%
   filter(!is.na(Block))
 
+#ideally nothing should change here
+nrow(by_block) == nrow(oe_by_id_agg)
+
 
 # QA check for duplicate combinations that will lead to double counting
 finalcheck = oe_by_id_agg %>%
@@ -191,8 +208,8 @@ finalcheck = oe_by_id_agg %>%
   left_join(new_oe, by = c('id_noloc' = 'ID_CODE'))
 
 # create summary of data that is not used and the provided reason
-notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason)), 
-                             c(nrow(notused), nrow(notused2)))
+notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason)), 
+                             c(nrow(notused), nrow(notused2), nrow(notused3)))
 names(notused_summary) = c("Reason", "Count")
 
 
