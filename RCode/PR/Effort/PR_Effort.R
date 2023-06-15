@@ -47,7 +47,12 @@ setdiff(names(new_oe), names(oe))
 setdiff(names(oe), names(new_oe))
 
 # combine all years of data
-oe = bind_rows(oe, new_oe)
+oe = bind_rows(oe, new_oe) %>% 
+  mutate(id = as.character(ID_CODE), 
+         date = ymd(stri_sub(ID_CODE, 6, 13)), 
+         month = month(date), 
+         year = year(date))
+
 
 ### temporary code to investigate prim1 prim2 issue
 Sp<- fread(here("Lookups", "SpeciesList05102023.csv" )) 
@@ -81,12 +86,8 @@ prims_stat = oe %>%
 # cleans up id, date, month and year. 
 # add in prim1 vs prim2 logic where prim1 is only used unless prim1 == 'Invertebrates"
 #Selects only relevant columns 
-oe <- oe %>% 
-  mutate(id = as.character(ID_CODE), 
-         date = ymd(stri_sub(ID_CODE, 6, 13)), 
-                    month = month(date), 
-                    year = year(date))%>%
-  select(id, year, month, date, prim1, prim2, CNTRBTRS, DAYSF, HRSF) %>%
+oe <- oe %>%
+  select(id, year, month, date, prim1, prim2, CNTRBTRS, DAYSF, LEADER, PRT_CODE, FIRST, survey, STATUS) %>%
   left_join(Sp %>% select(PSMFC_Code, TripType_Description), by = c("prim1" = "PSMFC_Code")) %>%
   mutate(primary = ifelse(TripType_Description == "Invertebrates" & !is.na(TripType_Description) & !is.na(prim2), prim2, prim1)) %>%
   select(-TripType_Description)
@@ -103,7 +104,56 @@ oe <- oe %>%
   mutate(DAYSF = ifelse(DAYSF == 0 & CNTRBTRS > 0, 1, DAYSF))
 
 
-    #Create species table by extracting data from SpeciesList.csv and merge species data with dfr_angrep data frame 
+
+# Pre-2014 Leader Follower fix for Angler Form Data -----------------------
+# filter out angler form data (pre 2014 PR2 data)
+anglerform = oe %>%
+  filter(year <= 2013 & is.na(survey)) #%>%
+  #filter(STATUS %in% c('1', '2')) # WHAT DO WE DO WITH OTHER STATUS
+
+# keep non-angler form data so fixed angler form data can be added back in
+oe_noangler = oe %>%
+  anti_join(anglerform)
+
+# filter out and flag LEADER data
+leader = anglerform %>%
+  filter(is.na(LEADER) & is.na(PRT_CODE) & FIRST == 1) %>% # what is FIRST and why is it used to distinguish leader
+  mutate(LEADER_ID = id)
+
+notused = anglerform %>%
+  filter(is.na(LEADER) & is.na(PRT_CODE) & (FIRST != 1 | is.na(FIRST))) %>%
+  mutate(Reason = 'Angler form data that is could not be flagged as leader or follower')
+
+write.csv(notused, 'Outputs/NotUsed/i1/notused.csv', row.names = F, na = "")
+
+
+# filter out and flag FOLLOWER data
+follower = anglerform %>%
+  filter((!is.na(LEADER) | !is.na(PRT_CODE))) %>%
+  mutate(LEADER_ID = ifelse(!is.na(LEADER), LEADER, PRT_CODE))
+unique(follower$FIRST) # DO WE NEED TO INCLUDE THIS, 100 records that have 1
+
+# QA check for Angler form data that is not flagged as leader or follower
+missing = anglerform %>%
+  anti_join(leader) %>%
+  anti_join(follower) %>%
+  anti_join(notused)
+
+# in the follower data, sum up the number of contributors for each LEADER_ID
+follower_sum = follower %>%
+  group_by(LEADER_ID)%>%
+  summarise(CNTRBTRS = sum(CNTRBTRS, na.rm = T))
+
+# join together the leader and summed follower data, and sum the total number of contributors
+pr2_total <- left_join(leader, follower_sum, by = c('LEADER_ID')) %>% 
+  rowwise() %>% 
+  mutate(CNTRBTRS = sum(CNTRBTRS.x, CNTRBTRS.y, na.rm = T)) %>%
+  select(-CNTRBTRS.x, -CNTRBTRS.y, -LEADER_ID)
+
+# join the fixed angler form data back with the i1 dataset
+oe_anglerform_fixed = rbind(oe_noangler, pr2_total)
+
+#Create species table by extracting data from SpeciesList.csv and merge species data with dfr_angrep data frame 
 Sp<- fread(here("Lookups", "SpeciesList05102023.csv" )) 
 Sp<- Sp %>% 
   select(ALPHA5, PSMFC_Code, Common_Name, TripType_Description) %>% 
@@ -114,18 +164,18 @@ Sp<- Sp %>%
 
 
 # pull out data that is not used because it uses a bad sp_code
-notused <- oe %>%
+notused2 <- oe_anglerform_fixed %>%
   anti_join(Sp, by = c("primary" = "PSMFC_Code")) %>%
   mutate(Reason = "Primary Species not found in species lookup.")
-unique(notused$primary) # looks like a lot of sp codes re reported as the alpha code need to clean this up
+unique(notused2$primary) # looks like a lot of sp codes re reported as the alpha code need to clean this up
 # NFOTH and others are used to indicate a non fishing vessel so are rightfully excluded
 
-byyear = notused %>% group_by(year, primary) %>% count()
-write.csv(notused, 'Outputs/NotUsed/i1/notused.csv', row.names = F, na = "")
+byyear = notused2 %>% group_by(year, primary) %>% count()
+write.csv(notused2, 'Outputs/NotUsed/i1/notused2.csv', row.names = F, na = "")
 
 
 # join species lookup to data
-oe_species <- oe %>%
+oe_species <- oe_anglerform_fixed %>%
   inner_join(Sp, by = c("primary" = "PSMFC_Code"))
 
 #summary of the different trip type descriptions found in the data
@@ -142,11 +192,11 @@ oe_species_loc <- oe_species %>%
   inner_join(all_locations_effort, by = c("id" = "ID_CODE")) %>%
   rename(year = year.x)
 
-notused2 <- oe_species %>%
+notused3 <- oe_species %>%
   anti_join(all_locations_effort, by = c("id"= "ID_CODE")) %>%
   mutate(Reason = "Does not have corresponding location data by ID")
-byyear = notused2 %>% group_by(year) %>% count()
-write.csv(notused2, 'Outputs/NotUsed/i1/notused2.csv', row.names = F, na = "")
+byyear = notused3 %>% group_by(year) %>% count()
+write.csv(notused3, 'Outputs/NotUsed/i1/notused3.csv', row.names = F, na = "")
 
 
 # do NOT normalize effort to the number of blocks visited so no block information is needed to be brought in
@@ -156,13 +206,13 @@ dat <- oe_species_loc %>%
          VesselPerBlock = 1)
 
 
-notused3 = dat %>%
+notused4 = dat %>%
   filter(CntrbPerBlock == 0) %>%
   mutate(Reason = 'Zero contributors reported in data')
 
-byyear = notused3 %>% group_by(year) %>%
+byyear = notused4 %>% group_by(year) %>%
   count()
-write.csv(notused3, 'Outputs/NotUsed/i1/notused3.csv', row.names = F, na = "")
+write.csv(notused4, 'Outputs/NotUsed/i1/notused4.csv', row.names = F, na = "")
 
 dat = filter(dat, CntrbPerBlock > 0)
 
@@ -208,8 +258,8 @@ finalcheck = oe_by_id_agg %>%
   left_join(new_oe, by = c('id_noloc' = 'ID_CODE'))
 
 # create summary of data that is not used and the provided reason
-notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason)), 
-                             c(nrow(notused), nrow(notused2), nrow(notused3)))
+notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason), unique(notused4$Reason)), 
+                             c(nrow(notused), nrow(notused2), nrow(notused3), nrow(notused4)))
 names(notused_summary) = c("Reason", "Count")
 
 
