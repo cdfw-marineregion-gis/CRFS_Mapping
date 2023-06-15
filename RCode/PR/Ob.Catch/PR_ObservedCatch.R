@@ -42,6 +42,7 @@ unique(notused$SP_CODE)
 write.csv(notused, 'Outputs/NotUsed/i3/notused.csv', row.names = F, na = "")
 
 
+
 # create a new id that combines the existing ID code with the location number. Extract the year, month and date. Select only the required columns. The NAs introduced by coercion warning message is for the SP Codes that are included in the not used object below. 
 oc <- oc %>% 
   mutate(SP_CODE = as.numeric(SP_CODE)) %>%
@@ -127,7 +128,12 @@ dat <- oc_species_loc %>%
          weight = as.numeric(ifelse(is.na(WGT) | WGT == "WGT", 0, WGT))) %>%
   select(-WGT)
 
-# normalize the fish count to the number of blocks visited, REMOVED NORMALIZING WEIGHT TO BLOCKS BECAUSE YOU WANT THE ACTUAL WEIGHT OF THE FISH AND THE COUNT IS ALREADY NORMALIZED. 
+
+
+
+
+
+# normalize the fish count to the number of blocks visited
 dat <- dat %>% 
   mutate(FishPerBlock = fish/total_blocks)
 
@@ -162,8 +168,25 @@ by_block = oc_sorted %>%
   filter(!is.na(Block))
 
 
+# Leader follower PR2 angler form fix -------------------------------------
+
+# read in i1 table to identify the leaders for pre2014 PR2 data
+i1 = fread(file=here("RCode", "PR", "Dat04to15", "Data", "PR_i1_2004-2015_487087r.csv"), fill = T, na.string = c("",".") )%>%
+  filter(YEAR <= 2013 & is.na(survey)) %>%
+  mutate_all(as.character) %>%
+  select(ID_CODE, LEADER, PRT_CODE) %>%
+  mutate(LEADER_ID = ifelse(!is.na(LEADER), LEADER, PRT_CODE)) %>%
+  mutate(LEADER_ID = ifelse(is.na(LEADER_ID), ID_CODE, LEADER_ID)) %>%
+  select(ID_CODE, LEADER_ID)
+
+by_block_wleader = by_block %>%
+  left_join(i1, by = 'ID_CODE') %>%
+  mutate(ID_CODE = ifelse(!is.na(LEADER_ID), LEADER_ID, ID_CODE)) %>% # EFFORT DATA IS JOINED BY ID with no LOCN
+  mutate(id = ifelse(!is.na(LEADER_ID), paste(LEADER_ID, locn, sep= ""), id))
+
+
 # aggregates to the id-block-species level the total number of fish caught and the average weight, this output is later used in another script to calculate different metrics but I thought there would be some utility in keeping things at the ID level (easily aggregate to a variety of temporal or sample level metrics)
-oc_by_id_agg = by_block %>%
+oc_by_id_agg = by_block_wleader %>%
   group_by(id, ID_CODE, locn, date, month, year, Block,  SP_CODE, Common_Name, Ob_Weighed_Fish) %>%
   summarise(Ob_Kept  = sum(Ob.Kept, na.rm = T), 
             Ob_AvKWgt = mean(Ob.KWgt, na.rm=TRUE)) %>%
