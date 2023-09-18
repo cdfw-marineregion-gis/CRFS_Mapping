@@ -17,7 +17,6 @@ library(sf)
 library(leaflet)
 options(scipen = 999)
 
-
 # Format block data ----------------------------------------------
 
 # function takes block column and microblock column and standardizes if populated
@@ -28,35 +27,25 @@ format_box = function(block_column, microblock_column) {
   return(combined_noblanks)
 }
 
+# read in location data for 16-22. New years of data can be added in the PR_readdata_16_present.R data
 i8_new = fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i8_data_16to22.csv'), fill = TRUE) %>%
   rename(ID_CODE = id_code) %>%
   mutate_all(as.character)
 
-# Read in location data, or the i8 data table for northern california
+# Read in older location data, or the i8 data table for northern california
 NLocList <- fread(file = here("RCode", "PR", "Dat04to15", "Data", "i8_1999-2016_NorCal_235374r.csv"), fill = TRUE, na.string = c("",".", "NA")) 
-# read in i8 location data for southern california
+# read in older i8 location data for southern california
 SLocList <- fread(file = here("RCode", "PR", "Dat04to15", "Data", "i8_1999-2016_SoCal_204029r.csv"), fill = TRUE, na.string = c("",".", "NA")) 
 
 #combine north and south locaiton data together
 loc = rbind(NLocList, SLocList) %>%
   mutate_all(as.character) %>%
-  mutate( 
-    date = ymd(stri_sub(ID_CODE, 6, 13)), 
-    year = year(date)) %>%
-  filter(year != 2016) %>% # duplicate to what CDFW produced. 
-  select(-date, -month)
+  filter(YEAR != 2016) # duplicate to what CDFW produced. 
 
-
-setdiff(names(i8_new), names(loc))
-# [1] "assnid"  "Ref #"  # can integrate these ASSNID REF_NUM
-
-setdiff(names(loc), names(i8_new))
-
+# combine all years of data
 loc = bind_rows(loc, i8_new)
-loc_org = loc
 
 # create new id based on id code and location number, format boxes into XX-XXX format, apply to each block column
-
 loc <- loc %>% 
   mutate(locn = ifelse(is.na(locn)| locn == 0, 1, locn),
          block1 = ifelse(block1 == 9999999, NA, block1),
@@ -67,12 +56,7 @@ loc <- loc %>%
          Bk2Bx2a = format_box(block2, box2a), 
          Bk2Bx2b = format_box(block2, box2b), 
          Bk2Bx2c = format_box(block2, box2c)) %>%
-  mutate( 
-         date = ymd(stri_sub(ID_CODE, 6, 13)), 
-         month = month(date), 
-         year = year(date)) %>%
-  select(id_loc, year, ID_CODE, MODE_FX, survey, HLDEPTH, HLDEPTH2, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, HGSIZE, hgsize2)
-
+  select(id_loc, year=YEAR, ID_CODE, MODE_FX, survey, ddlat, ddlong, Bk1Bx1a, Bk1Bx1b, Bk1Bx1c, Bk2Bx2a, Bk2Bx2b, Bk2Bx2c, HGSIZE, hgsize2)
 
 
 # remove any data that is not PR (MODE_FX = 7)
@@ -80,9 +64,10 @@ notused = loc %>%
   filter(MODE_FX != 7 | is.na(MODE_FX)) %>%
   mutate(Reason = "Location not MODE_FX == 7 (PR data)")
 unique(notused$MODE_FX)
-write.csv(notused, 'Outputs/NotUsed/i8/notused.csv', row.names = F, na = "")
 byyear = notused %>% group_by(year) %>% count()
+write.csv(notused, 'Outputs/NotUsed/i8/notused.csv', row.names = F, na = "")
 
+# filter to only PR data 
 loc <- loc %>% 
   filter(MODE_FX ==7)
 
@@ -97,7 +82,6 @@ notused2 = loc %>%
 # 2021 and 2020 missing a lot of data due to COVID
 # other data is mostly block1 reported with no box
 byyear = notused2 %>% group_by(year) %>% count()
-
 write.csv(notused2, 'Outputs/NotUsed/i8/notused2.csv', row.names = F, na = "")
 removed = nrow(notused2)
 
@@ -112,9 +96,10 @@ hgsize_summary = loc %>% group_by(HGSIZE, hgsize2) %>% count()
 
 notused3 = filter(loc, HGSIZE > 1 | hgsize2 > 1) %>%
   mutate(Reason = "HGSize or HGSize2 reported ") #2004 and 2005 is the majority of this data
-write.csv(notused3, 'Outputs/NotUsed/i8/notused3.csv', row.names = F, na = "")
 byyear = notused3 %>% group_by(year, HGSIZE, hgsize2) %>% count()
+write.csv(notused3, 'Outputs/NotUsed/i8/notused3.csv', row.names = F, na = "")
 
+# filter to only use data that does not have an HGSIZE or hgsize2 or only has 1 reported
 loc = loc %>%
   filter((is.na(HGSIZE) | HGSIZE <=1) & (is.na(hgsize2) | hgsize2 <=1))
 
@@ -132,15 +117,12 @@ LatFilter  <- loc %>%  filter(is.na(Bk1Bx1a) & is.na(Bk1Bx1b) & is.na(Bk1Bx1c) &
   mutate(ddlong = as.numeric(ddlong)*-1) %>%
   mutate(ddlat = as.numeric(ddlat))
 
-
-
 # qa the lat long filter, there is alot of bad coordinates
 notused4 = LatFilter %>%
   filter(ddlat > 50 | ddlong < -150  | is.na(ddlong) ) %>%
   mutate(Reason = "Bad COORDS REPORTED")
 write.csv(notused4, 'Outputs/NotUsed/i8/notused4.csv', row.names = F, na = "")
 byyear = notused4 %>% group_by(year) %>% count()
-
 
 LatFilter = LatFilter %>%
   filter(ddlat < 50 & ddlong > -150)
@@ -183,7 +165,6 @@ coords_wblocks = filter(coords_wblocks, !is.na(Bk1Bx1a))
 # recombine the data that had a block reported to the data that had coordinates (and now a joined block)
 all_locations = rbind(BlkFilter, coords_wblocks)
 
-
 # count the number of times a unique id code appears in the location data
 freq_summary <- all_locations %>% group_by(id_loc) %>% count()
 
@@ -197,7 +178,7 @@ qa_duplicates = all_locations %>%
   filter(n> 1) %>%
   pivot_longer(Bk1Bx1a:Bk2Bx2c, names_to = "col", values_to = 'Block') %>%
   filter(!is.na(Block)) %>%
-  select(-col, -HLDEPTH, -HLDEPTH2) %>%
+  select(-col) %>%
   unique() %>% # remove when a block is repeated in the duplicate IDs
   group_by(id_loc) %>%
   mutate(block_col = row_number()) %>%
@@ -206,13 +187,11 @@ qa_duplicates = all_locations %>%
 
 byyear = qa_duplicates %>% group_by(year) %>% count()
 
-
 # join back in this count data
 all_locations <- all_locations %>%
   left_join(freq_summary, by = "id_loc") %>%
   arrange(id_loc) %>%
   rename(freq = n)
-
 
 #filter to just ids used once
 all_locations = filter(all_locations, freq == 1) %>%
@@ -222,7 +201,6 @@ all_locations = filter(all_locations, freq == 1) %>%
   relocate('extrablock9', .after = 'extrablock8') %>%
   relocate('extrablock10', .after = 'extrablock9') %>%
   relocate('extrablock11', .after = 'extrablock10')
-
 
 # this counts the number of UNIQUE blocks reported in each row of data, simplifies the long repeated lines in WINNS code
 all_locations <- cbind(all_locations, total_blocks = apply(all_locations[, Bk1Bx1a:extrablock11], 1, function(x)length(unique(x[!is.na(x)]))))
@@ -243,16 +221,13 @@ write.csv(notused6, 'Outputs/NotUsed/i8/notused6.csv', row.names = F, na = "")
 byyear = notused6 %>% group_by(year) %>% count()
 
 all_locations = all_locations %>%
-  filter(!(id_loc %in% pr1vpr2_duplicates$id_loc))
-
-
-
-
+  filter(!(id_loc %in% pr1vpr2_duplicates$id_loc)) %>%
+  select(-ddlat, -ddlong, -HGSIZE, -hgsize2, -freq) %>%
+  mutate(id_loc = paste0('ID', id_loc)) %>% # fix for annoying loss of precision in csvs, force ids to be strings
+  mutate(ID_CODE = paste0('ID', ID_CODE))
 notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), unique(notused3$Reason), unique(notused4$Reason), unique(notused5$Reason), unique(notused6$Reason)), 
                              c(nrow(notused), nrow(notused2), nrow(notused3), nrow(notused4), nrow(notused5), nrow(notused6)))
 names(notused_summary) = c("Reason", "Count")
-
-
 
 write.csv(all_locations, "Outputs/location_cleaned.csv", na = "", row.names = F)
 write.csv(notused_summary, "Outputs/location_notusedsummary.csv", na = "", row.names = F)

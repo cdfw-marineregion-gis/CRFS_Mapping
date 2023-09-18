@@ -16,24 +16,24 @@ library(lubridate)
 library(here)
 options(scipen = 999)
 
-# sources the script that is used to clean up the i8 table, returns a single variable 'all_locations' that provides the cleanup blocks at the ID level. Went through a series of filters as well. See other script for more information. 
-source(here('RCode', "PR", "Locations", 'PR_Location.R'))
+# reads in the .csv exported from the locations script. This replaced the previous sourcing logic for speed. IF CHANGES HAVE BEEN MADE TO THE PR_LOCATION.R SCRIPT THEN THAT SCRIPT NEEDS TO BE RERAN TO HAVE THE MOST UP TO DATE DATA
+all_locations = read.csv("Outputs/location_cleaned.csv", na.strings = "") %>%
+  mutate_all(as.character) %>%
+  mutate(total_blocks = as.numeric(total_blocks))
 
-# this line is required when sourcing multiple R scripts. The plan is to run all required catch and effort scripts in a "master" script to avoid having to run everything one by one. This line makes sure the required objects are not removed when sourcing multiple scripts. Youll see it in the other scripts as well.
+# memory variable clean up in case user is running multiple scripts
 rm(list = ls()[!ls() %in% c("oc_by_id_agg", "oe_by_id_agg", "rc_by_id_agg", 'all_locations')])
 
 # remove id with location since location is not used with effort. Additionally, there are some situations where they same blocks are used in different locations. This leads to double counting in effort
 all_locations_effort = all_locations %>%
-  select(-id_loc, -HLDEPTH2, -HLDEPTH, -freq, -ddlat, -ddlong) %>%
+  select(-id_loc, -year, -survey) %>%
   unique()
-
-
 
 #read in the i1 table for 2004-2015
 oe = fread(file=here("RCode", "PR", "Dat04to15", "Data", "PR_i1_2004-2015_487087r.csv"), fill = T, na.string = c("",".") )  %>%
-  mutate_all(as.character) 
+  mutate_all(as.character)
 
-# read in i1 for 2016 to 2021
+# read in i1 for 2016 to 2022
 new_oe <- fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i1_data_16to22.csv'), fill = TRUE) %>%
   mutate_all(as.character) %>%
   rename(DAYSF = daysf) 
@@ -42,19 +42,11 @@ new_oe <- fread(file = here('RCode', 'PR', 'Dat16toPresent', 'Data', 'i1_data_16
 not_all_na <- function(x) any(!is.na(x))
 oe = oe %>% select(where(not_all_na))
 
-setdiff(names(new_oe), names(oe))
-#[1] "geara"  "boatn"  "assnid" "port"   "daysf"  "gearB"  "island" "nolic"  "missed" "Ref #" 
-setdiff(names(oe), names(new_oe))
-
 # combine all years of data
 oe = bind_rows(oe, new_oe) %>% 
-  mutate(id = as.character(ID_CODE), 
-         date = ymd(stri_sub(ID_CODE, 6, 13)), 
-         month = month(date), 
-         year = year(date))
+  mutate(id = as.character(ID_CODE))
 
-
-### temporary code to investigate prim1 prim2 issue
+### Read in Species Lookup table
 Sp<- fread(here("Lookups", "SpeciesList05102023.csv" )) 
 Sp<- Sp %>% 
   select(PSMFC_Code, Common_Name, TripType_Description) %>% 
@@ -63,53 +55,30 @@ Sp<- Sp %>%
   filter(!is.na(PSMFC_Code)) %>%
   mutate(PSMFC_Code = as.character(PSMFC_Code))
 
-#create summary of the different prim1/prim2 combinations
-prims_stat = oe %>%
-  group_by(prim1, prim2) %>% 
-  count() %>%
-  left_join(Sp, by = c("prim1" = "PSMFC_Code")) %>%
-  mutate(prim1 = Common_Name) %>%
-  select(-Common_Name) %>%
-  rename(Trip_1 = TripType_Description) %>%
-  left_join(Sp, by = c("prim2" = "PSMFC_Code")) %>%
-  mutate(prim2 = Common_Name) %>%
-  select(-Common_Name) %>%
-  rename(Trip_2 = TripType_Description) %>%
-  arrange(desc(n)) %>%
-  group_by(prim1, Trip_1, prim2, Trip_2) %>%
-  summarise(n = sum(n)) %>%
-  arrange(desc(n)) %>%
-  mutate(different_type = Trip_1 != Trip_2) %>%
-  mutate(different_type =  ifelse(is.na(different_type), FALSE, different_type))
-#write.csv(prims_stat, "Outputs/Observed_Effort_Prim1vPrim2.csv", row.names = FALSE, na = "")
 
-# cleans up id, date, month and year. 
 # add in prim1 vs prim2 logic where prim1 is only used unless prim1 == 'Invertebrates"
 #Selects only relevant columns 
 oe <- oe %>%
-  select(id, year, month, date, prim1, prim2, CNTRBTRS, DAYSF, LEADER, PRT_CODE, FIRST, survey, STATUS) %>%
+  select(id, year=YEAR, prim1, prim2, CNTRBTRS, DAYSF, LEADER, PRT_CODE, FIRST, survey) %>%
   left_join(Sp %>% select(PSMFC_Code, TripType_Description), by = c("prim1" = "PSMFC_Code")) %>%
   mutate(primary = ifelse(TripType_Description == "Invertebrates" & !is.na(TripType_Description) & !is.na(prim2), prim2, prim1)) %>%
   select(-TripType_Description)
 
-
-# may want to convert these to anythings
+# may want to convert these to anythings in the future so the data is still used
 na_triptypes = oe %>%
   filter(is.na(primary))
 
-#clean up DAYSF and CNTRBTRS fields so NAs are 0, if days are reported as 0 in the data but CNTRBTRS were reported, change the days fished to 1 (NEW LOGIC)
+#clean up DAYSF and CNTRBTRS fields so NAs are 0, if days are reported as 0 in the data but CNTRBTRS were reported, change the days fished to 1
 oe <- oe %>% 
   mutate(DAYSF = as.numeric(ifelse(is.na(DAYSF), 0, DAYSF)), 
          CNTRBTRS = as.numeric(ifelse(is.na(CNTRBTRS), 0 , CNTRBTRS))) %>%
   mutate(DAYSF = ifelse(DAYSF == 0 & CNTRBTRS > 0, 1, DAYSF))
 
 
-
 # Pre-2014 Leader Follower fix for Angler Form Data -----------------------
 # filter out angler form data (pre 2014 PR2 data)
 anglerform = oe %>%
-  filter(year <= 2013 & is.na(survey)) #%>%
-  #filter(STATUS %in% c('1', '2')) # WHAT DO WE DO WITH OTHER STATUS
+  filter(year <= 2013 & is.na(survey))
 
 # keep non-angler form data so fixed angler form data can be added back in
 oe_noangler = oe %>%
@@ -117,21 +86,19 @@ oe_noangler = oe %>%
 
 # filter out and flag LEADER data
 leader = anglerform %>%
-  filter(is.na(LEADER) & is.na(PRT_CODE) & FIRST == 1) %>% # what is FIRST and why is it used to distinguish leader
+  filter(is.na(LEADER) & is.na(PRT_CODE) & FIRST == 1) %>% 
   mutate(LEADER_ID = id)
 
+# export the data that is not being used due to issues with the angler form data
 notused = anglerform %>%
   filter(is.na(LEADER) & is.na(PRT_CODE) & (FIRST != 1 | is.na(FIRST))) %>%
   mutate(Reason = 'Angler form data that is could not be flagged as leader or follower')
-
 write.csv(notused, 'Outputs/NotUsed/i1/notused.csv', row.names = F, na = "")
-
 
 # filter out and flag FOLLOWER data
 follower = anglerform %>%
   filter((!is.na(LEADER) | !is.na(PRT_CODE))) %>%
   mutate(LEADER_ID = ifelse(!is.na(LEADER), LEADER, PRT_CODE))
-unique(follower$FIRST) # DO WE NEED TO INCLUDE THIS, 100 records that have 1
 
 # QA check for Angler form data that is not flagged as leader or follower
 missing = anglerform %>%
@@ -145,23 +112,13 @@ follower_sum = follower %>%
   summarise(CNTRBTRS = sum(CNTRBTRS, na.rm = T))
 
 # join together the leader and summed follower data, and sum the total number of contributors
-pr2_total <- left_join(leader, follower_sum, by = c('LEADER_ID')) %>% 
-  rowwise() %>% 
+pr2_total <- left_join(leader, follower_sum, by = c('LEADER_ID')) %>%
+  rowwise() %>%
   mutate(CNTRBTRS = sum(CNTRBTRS.x, CNTRBTRS.y, na.rm = T)) %>%
   select(-CNTRBTRS.x, -CNTRBTRS.y, -LEADER_ID)
 
 # join the fixed angler form data back with the i1 dataset
 oe_anglerform_fixed = rbind(oe_noangler, pr2_total)
-
-#Create species table by extracting data from SpeciesList.csv and merge species data with dfr_angrep data frame 
-Sp<- fread(here("Lookups", "SpeciesList05102023.csv" )) 
-Sp<- Sp %>% 
-  select(ALPHA5, PSMFC_Code, Common_Name, TripType_Description) %>% 
-  mutate(PSMFC_Code = as.character(PSMFC_Code)) %>%
-  filter(Common_Name != "bivalve class") %>%
-  filter(!is.na(PSMFC_Code)) %>%
-  rename(alpha = ALPHA5)
-
 
 # pull out data that is not used because it uses a bad sp_code
 notused2 <- oe_anglerform_fixed %>%
@@ -169,7 +126,6 @@ notused2 <- oe_anglerform_fixed %>%
   mutate(Reason = "Primary Species not found in species lookup.")
 unique(notused2$primary) # looks like a lot of sp codes re reported as the alpha code need to clean this up
 # NFOTH and others are used to indicate a non fishing vessel so are rightfully excluded
-
 byyear = notused2 %>% group_by(year, primary) %>% count()
 write.csv(notused2, 'Outputs/NotUsed/i1/notused2.csv', row.names = F, na = "")
 
@@ -184,40 +140,45 @@ type_summary = oe_species %>%
   count() %>%
   arrange(desc(n)) # some invertebrates still make it through
 
-
 # check to make sure no duplicates were created or rows were lost
-nrow(oe) == (nrow(oe_species) + nrow(notused))
+nrow(oe_anglerform_fixed) == (nrow(oe_species) + nrow(notused2))
 
-oe_species_loc <- oe_species %>%
-  inner_join(all_locations_effort, by = c("id" = "ID_CODE")) %>%
-  rename(year = year.x)
 
-notused3 <- oe_species %>%
+# Merge together effort and location data ----------------------------------
+# paste 'ID' to the ID column to force from integer to string in the script and during exports. Makes life easier when opening in excel since excel loses resolution of large numbers
+# join location data by ID
+oe_species_loc <- oe_species  %>%
+  mutate(id = paste0('ID', id)) %>%
+  inner_join(all_locations_effort, by = c("id" = "ID_CODE")) 
+
+# export data that does not have corresponding locaiton data
+notused3 <- oe_species  %>%
+  mutate(id = paste0('ID', id)) %>%
   anti_join(all_locations_effort, by = c("id"= "ID_CODE")) %>%
   mutate(Reason = "Does not have corresponding location data by ID")
 byyear = notused3 %>% group_by(year) %>% count()
 write.csv(notused3, 'Outputs/NotUsed/i1/notused3.csv', row.names = F, na = "")
 
 
-# do NOT normalize effort to the number of blocks visited so no block information is needed to be brought in
-dat <- oe_species_loc %>% 
+# Rename columns for clarity. There is no weighting of effort by block.
+oe_species_loc <- oe_species_loc %>% 
   mutate(DaysPerBlock = DAYSF, 
          CntrbPerBlock = CNTRBTRS, 
          VesselPerBlock = 1)
 
-
-notused4 = dat %>%
+# exports data that does not have any contributors in the data
+notused4 = oe_species_loc %>%
   filter(CntrbPerBlock == 0) %>%
   mutate(Reason = 'Zero contributors reported in data')
-
 byyear = notused4 %>% group_by(year) %>%
   count()
 write.csv(notused4, 'Outputs/NotUsed/i1/notused4.csv', row.names = F, na = "")
 
-dat = filter(dat, CntrbPerBlock > 0)
+# uses only data that has a contributor
+oe_species_loc = filter(oe_species_loc, CntrbPerBlock > 0)
 
-# pivot the data so each block reported for a single id has its own row. Counts are already normalized by blocks visited so this will not double count anything but greatly simplifies the logic that WINN uses to generate summary statistics
-by_block = dat %>%
+# pivot the data so each block reported for a single id has its own row. 
+by_block = oe_species_loc %>%
   pivot_longer(Bk1Bx1a:extrablock11, names_to = "col", values_to = 'Block') %>%
   filter(!is.na(Block)) %>%
   select(-col, -total_blocks) %>%
@@ -231,13 +192,13 @@ duplicates = by_block %>%
   filter(n > 1) %>%
   left_join(by_block)
 
+# remove the duplicates identied above
 by_block = by_block %>%
   anti_join(duplicates)
 
-
-# aggregate effort to the id-block-species level. This will later be aggregated to the Triptype level but wanted to leave species in for now. 
+# aggregate effort to the id-block-trip type level.
 oe_by_id_agg = by_block %>%
-  group_by(id, date, month, year, Block, Common_Name, TripType_Description) %>%
+  group_by(id, year, Block, Common_Name, TripType_Description) %>%
   summarise(Days = sum(DaysPerBlock, na.rm = T), 
             Cntrbs = sum(CntrbPerBlock, na.rm = T), 
             Vessels = sum(VesselPerBlock, na.rm = T)) %>%
@@ -246,9 +207,8 @@ oe_by_id_agg = by_block %>%
   rename(id_noloc = id) %>%
   filter(!is.na(Block))
 
-#ideally nothing should change here
+#check for no change
 nrow(by_block) == nrow(oe_by_id_agg)
-
 
 # QA check for duplicate combinations that will lead to double counting
 finalcheck = oe_by_id_agg %>%
@@ -263,7 +223,9 @@ notused_summary = data.frame(c(unique(notused$Reason), unique(notused2$Reason), 
 names(notused_summary) = c("Reason", "Count")
 
 
-
+# export cleaned up effort data and the summary of not used data. 
 write.csv(oe_by_id_agg, "Outputs/oe.csv", na = "", row.names = F)
 write.csv(notused_summary, "Outputs/oe_notused_summary.csv", na = "", row.names = F)
+
+gc()
 
