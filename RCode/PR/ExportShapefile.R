@@ -38,7 +38,7 @@ group_options = names(groups)[2:ncol(groups)]
 
 # select individual species or a species group
 unique(group_options) # Another option is ALL
-SPECIES = 'All'
+SPECIES = 'Rockfish'
 
 # test to confirm that chosen species is either an option within the grouped species or is a unique species found within the CRFS species lookup table. The script will automatically stop if species is not found. 
 if (SPECIES %in% group_options| SPECIES %in% unique(output$Common_Name_catch)){
@@ -50,13 +50,13 @@ if (SPECIES %in% group_options| SPECIES %in% unique(output$Common_Name_catch)){
 # pick a trip type description
 unique(output$TripType_Description_effort)
 # another option is 'ALL'
-TRIPTYPE = 'All'
+TRIPTYPE = 'Bottomfish'
 
 # pick the minimum number of samples required per block
 MINIMUM_SAMPLES = 3
 
 # What metric either CPUA_Kept or CPUA_All
-METRIC = 'CPUA_Kept'
+METRIC = 'CPUA_All'
 
 # where you want it saved
 WHERE = 'C:\\GIS\\CRFSMapping\\Outputs\\'
@@ -80,6 +80,10 @@ if (SPECIES %in% group_options) {
 # filter catch data to both CATCH and TRIP
 filtered_catch = output %>%
   filter(Common_Name_catch %in% species)
+
+# summarize the effort side trip types with the catch species
+filtered_catch %>%
+  group_by(TripType_Description_effort) %>% count()
 
 # if 'All' effort is chosen then no effort side filtering is applied, instead the trip type description is mutated to 'All' so all effort can be aggregated together
 if (TRIPTYPE == 'All') {
@@ -259,4 +263,64 @@ leaflet() %>%
             title = "CPUA Kept",
             opacity = 1
   )
+
+
+
+
+
+# Monthly Output ----------------------------------------------------------
+
+library(lubridate)
+library(stringi)
+
+month_aggregated_effort = filtered_effort %>%
+  mutate(date = ymd(stri_sub(id, 8, 15)), 
+          month = month(date)) %>%
+  select(id, month, Block, Vessels, AnglerDays, TripType_Description_effort) %>%
+  unique()
+
+# sum angler days for each  block by TRIP TYPE
+month_aggregate_effort = month_aggregated_effort %>%
+  group_by(Block, TripType_Description_effort, month) %>%
+  summarise(AnglerDays = sum(AnglerDays, na.rm = T),
+            n_samples_effort = n_distinct(id))
+
+
+# sum catch for each block by SPECIES AND TRIP TYPE
+month_aggregate_catch = filtered_catch %>%
+  mutate(date = ymd(stri_sub(id, 8, 15)), 
+         month = month(date)) %>%
+  group_by(Block, Common_Name_catch, TripType_Description_effort, month) %>%
+  summarise(TotalCatch = sum(Total_Fish_Caught, na.rm = T),
+            Kept = round(sum(Total_Obs_Fish_Caught, na.rm = T), 2),
+            Released = round(sum(Total_Rep_Fish_Caught, na.rm=T), 2))
+
+
+# join together aggregate catch and effort by BLOCK, YEAR, and TRIP Use effort on left side because you can have effort and no catch
+# calculate CPUA for all fish and just kept
+month_joined = month_aggregate_effort %>%
+  left_join(month_aggregate_catch, by = c("Block", "month", "TripType_Description_effort")) %>%
+  mutate(CPUA_All = round(TotalCatch/AnglerDays, 3)) %>%
+  mutate(CPUA_Kept = round(Kept/AnglerDays, 3)) %>%
+  mutate(CPUA_Kept = ifelse(is.na(CPUA_Kept), 0, CPUA_Kept)) %>%
+  mutate(CPUA_All = ifelse(is.na(CPUA_All), 0, CPUA_All)) %>%
+  mutate(Common_Name_catch = ifelse(is.na(Common_Name_catch) | Common_Name_catch == "", SPECIES, Common_Name_catch)) %>% 
+  ungroup()
+
+# long format -------------------------------------------------------------
+# long format of data (where year is in own row) is good for time enabled features. Also can have multiple variables included such as CPUA Kept and CPUA All
+
+# joined_sample_limited = joined %>%
+#   filter(n_samples_effort >= MINIMUM_SAMPLES) # should make over all years
+
+layer_month = blocks.SP %>%
+  inner_join(month_joined, by = c( 'NM_INDEX' = 'Block')) %>%
+  mutate(time = ifelse(nchar(month) == 1, paste0('19',"0",month), paste0('19', month))) %>%
+  filter(n_samples_effort >= MINIMUM_SAMPLES) %>%
+  select(Block = NM_INDEX, Catch = Common_Name_catch, Trip = TripType_Description_effort, Samples = n_samples_effort, time, everything() )
+
+month_name = paste0(SPECIES, '_',TRIPTYPE, '_', MINIMUM_SAMPLES ,'_SAMPLES_monthly.shp')
+
+st_write(layer_month, paste(WHERE, month_name), delete_layer=T)
+  
 
